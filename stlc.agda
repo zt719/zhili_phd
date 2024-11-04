@@ -72,3 +72,30 @@ data EL where
   ⇒-β : ƛ⁻¹ (ƛ t) ≡ t
   ⇒-η : ƛ (ƛ⁻¹ t) ≡ t
   ƛ-[] : (ƛ t) [ δ ]t ≡ ƛ (t [ σ ▹-map A ]t)
+
+_$_ : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
+_$_ = {!!}
+
+_[_]¹ : Tm (Γ ▹ A) B → Tm Γ A → Tm Γ B
+_[_]¹ = {!!}
+
+β : {t : Tm (Γ ▹ A) B}{u : Tm Γ A}
+  → (ƛ t) $ u ≡ t [ u ]¹
+β = {!!}
+
+suc : Tm Γ A → Tm (Γ ▹ B) A
+suc = {!!}
+
+zero : Tm (Γ ▹ A) A
+zero = {!!}
+
+η : {t : Tm Γ (A ⇒ B)}
+  → ƛ (suc t $ zero) ≡ t
+η = {!!} 
+
+
+-- t ⁺ [ u ]¹ ≡ t
+-- ...
+
+
+
