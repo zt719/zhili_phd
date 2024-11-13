@@ -7,16 +7,14 @@ open import Data.Unit
 open import Data.Empty
 
 infixr 5 _⇒_
-
 data Ty : Set where
   set : Ty
   _⇒_ : Ty → Ty → Ty
-
+  
+infixl 5 _▷_
 data Con : Set where
   • : Con
   _▷_ : Con → Ty → Con
-
-infixl 5 _▷_
 
 -- dom (A ⇒ B ⇒ set) = • ▷ A ▷ B
 dom : Ty → Con
@@ -136,7 +134,8 @@ HCont-Set (Γ₀ = • ▷ (set ⇒ set) ▷ set)
 
 
 TT : Ty
-TT =  ((set ⇒ set)  ⇒ (set ⇒ set))
+TT = (set ⇒ set) ⇒ set ⇒ set
+
 HC : HCont TT
 HC = lam (lam (ne (record { S = S ; P = P ; R = R }))) --lam (lam (ne (record { S = S ; P = P ; R = R })))
   where Γ₀ : Con
