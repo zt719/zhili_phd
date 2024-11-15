@@ -100,6 +100,8 @@ record ⟦_⟧set {Γ} CC γ where
 
 -- morphisms
 
+
+{-
 record Cat : Set where
   field
     obj : Set
@@ -172,7 +174,7 @@ A ×-Cat B =
 ⟦_⟧cat : {A : Ty} → HCont A → Cat.obj (⟦ A ⟧Cat)
 ⟦ CC ⟧cat = {!!}
 
-
+-}
 
 
 {-
