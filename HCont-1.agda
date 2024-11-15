@@ -137,7 +137,7 @@ TT : Ty
 TT = (set ⇒ set) ⇒ set ⇒ set
 
 HC : HCont TT
-HC = lam (lam (ne (record { S = S ; P = P ; R = R }))) --lam (lam (ne (record { S = S ; P = P ; R = R })))
+HC = lam (lam (ne (record { S = S ; P = P ; R = R })))
   where Γ₀ : Con
         Γ₀ = • ▷ (set ⇒ set) ▷ set
         S : {A : Ty} → Var Γ₀ A → Set

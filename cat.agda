@@ -4,10 +4,6 @@ module Cat where
 
 open import Agda.Primitive
   using (Level; lzero; lsuc; _⊔_)
- 
-lone : Level
-lone = lsuc lzero
-
 open import Data.Nat
   using (ℕ; zero; suc)
 open import Data.Product
@@ -26,12 +22,11 @@ open import Data.Maybe
 open import Data.List
   using (List; []; _∷_; head)
   renaming (map to List-map)
-  
-open import Function.Base
-  using (id; flip; _∘′_)
+import Function.Base
 
 open import Relation.Binary.PropositionalEquality
   renaming (trans to _∙_)
+  hiding ([_])
   
 --open import Cubical.Foundations.Prelude using (Type; _≡_; refl; cong; cong₂; _∙_; funExt)
 
@@ -62,106 +57,107 @@ suc n ≤ suc m = n ≤ m
 ≤-trans {zero} p q = tt
 ≤-trans {suc n} {suc m} {suc l} p q = ≤-trans {n} {m} {l} p q
 
-record Preorder : Set₁ where
-  constructor mkPreorder
+record Pre : Set₁ where
+  constructor mkPre
   field
     X : Set
     R : X → X → Prop
     refll : {a : X} → ⟦ R a a ⟧
     transs : {a b c : X} → ⟦ R b c ⟧ → ⟦ R a b ⟧ → ⟦ R a c ⟧
 
-ℕ-Preorder : Preorder
-ℕ-Preorder = mkPreorder ℕ _≤_ (λ {a} → ≤-refl {a}) (λ {a} {b} {c} p q → ≤-trans {a} {b} {c} p q)
+ℕ-Pre : Pre
+ℕ-Pre = mkPre ℕ _≤_ (λ {a} → ≤-refl {a}) (λ {a} {b} {c} p q → ≤-trans {a} {b} {c} p q)
 
-record Category {ℓ : _} : Set (lsuc ℓ) where
-  constructor mkCategory
+record Cat {o ℓ e : _} : Set (lsuc (o ⊔ ℓ ⊔ e)) where
+  constructor mkCat
   infix  4 _≈_
   infixr 9 _∘_
+  infix  10 _[_,_] _[_≈_] _[_∘_]
   field
-    ∣_∣ : Set ℓ
-    Hom : ∣_∣ → ∣_∣ → Set
-    _≈_ : {a b : ∣_∣} (f g : Hom a b) → Set
-    Id  : (a : ∣_∣) → Hom a a
-    _∘_ : {a b c : ∣_∣} → Hom b c → Hom a b → Hom a c
-    idˡ : {a b : ∣_∣} {f : Hom a b} → Id b ∘ f ≈ f
-    idʳ : {a b : ∣_∣} {f : Hom a b} → f ∘ Id a ≈ f
-    assoc     : {a b c d : ∣_∣} {f : Hom c d} {g : Hom b c} {h : Hom a b}
+    Obj : Set o
+    Hom : Obj → Obj → Set ℓ
+    _≈_ : {a b : Obj} (f g : Hom a b) → Set e
+    id  : {a : Obj} → Hom a a
+    _∘_ : {a b c : Obj} → Hom b c → Hom a b → Hom a c
+    id-l : {a b : Obj} {f : Hom a b} → id {b} ∘ f ≈ f
+    id-r : {a b : Obj} {f : Hom a b} → f ∘ id {a} ≈ f
+    assoc     : {a b c d : Obj} {f : Hom c d} {g : Hom b c} {h : Hom a b}
               → (f ∘ g) ∘ h ≈ f ∘ (g ∘ h)
 
+  ∣_∣ = Obj
+  _[_,_] = Hom
+  _[_≈_] = _≈_
+  _[_∘_] = _∘_
+
+Pre2Cat : Pre → Cat
+Pre2Cat (mkPre Obj R refll trans)
+  = mkCat Obj (λ a b → ⟦ R a b ⟧) _≡_ refll trans (is-prop (R _ _)) (is-prop (R _ _)) (is-prop (R _ _))
+
+record Mon {o e : _} : Set (lsuc (o ⊔ e)) where
+  constructor mkMon
+  infix  4 _≈_
+  infixr 9 _∘_
+  infix  10 _[_≈_] _[_∘_]  
+  field
+    Obj : Set o
+    _≈_ : (a b : Obj) → Set e    
+    a : Obj
+    _∘_ : Obj → Obj → Obj
+    id-l : {x : Obj} → a ∘ x ≈ x
+    id-r : {x : Obj} → x ∘ a ≈ x
+    assoc : {x y z : Obj} → (x ∘ y) ∘ z ≈ x ∘ (y ∘ z)
+
+  ∣_∣ = Obj
+  _[_≈_] = _≈_
+  _[_∘_] = _∘_
+  _∙ = a
+
+Mon2Cat : {o ℓ e : _} → Mon {o} {e} → Cat {lzero} {o} {e}
+Mon2Cat (mkMon Obj _≈_ a _∘_ id-l id-r assoc)
+  = mkCat ⊤ (λ _ _ → Obj) _≈_ a _∘_ id-l id-r assoc
+
+record Mon-Hom {o e : _} (M N : Mon {o} {e}) : Set (e ⊔ o) where
+  constructor mkMon-Hom
+  open Mon
+  field
+    f : ∣ M ∣ → ∣ N ∣
+    f-∙ : N [ f (M ∙) ≈ N ∙ ]
+    f-∘ : {a b : ∣ M ∣} → N [ f (M [ a ∘ b ]) ≈ N [ f a ∘ f b ] ]
+
 {-
-_op : {ℓ : _} → Category {ℓ} → Category {ℓ}
-mkCategory ∣_∣ Hom _≈_ Id _∘_ idˡ idʳ assoc op
-  = mkCategory ∣_∣ (λ a b → Hom b a) _≈_ Id (λ f g → g ∘ f) idʳ idˡ (λ {a} {b} {c} {d} {f} {g} {h} → {!!})
+postulate
+  MON : {o ℓ e : _} → Cat {o} {ℓ} {e}
 -}
 
-Preorder2Category : Preorder → Category
-Preorder2Category (mkPreorder ∣_∣ R refll trans)
-  = mkCategory ∣_∣ (λ a b → ⟦ R a b ⟧) _≡_ (λ _ → refll) trans (is-prop (R _ _)) (is-prop (R _ _)) (is-prop (R _ _))
-  
-record Monoid {ℓ : _} : Set (lsuc ℓ) where
-  constructor mkMonoid
-  field
-    ∣_∣ : Set
-    e : ∣_∣
-    _∘_ : ∣_∣ → ∣_∣ → ∣_∣
-    idˡ : {x : ∣_∣} → e ∘ x ≡ x
-    idʳ : {x : ∣_∣} → x ∘ e ≡ x
-    assoc : {x y z : ∣_∣} → (x ∘ y) ∘ z ≡ x ∘ (y ∘ z)
+SET : {o : _} → Cat {lsuc o} {o} {o}
+Cat.Obj (SET {o}) = Set o
+Cat.Hom SET a b = a → b
+Cat._≈_ SET = _≡_
+Cat.id SET = Function.Base.id
+Cat._∘_ SET = Function.Base._∘′_
+Cat.id-l SET = refl
+Cat.id-r SET = refl
+Cat.assoc SET = refl
 
-Monoid2Category : {ℓ : _} → Monoid {ℓ} → Category
-Monoid2Category (mkMonoid ∣_∣ e _∘_ idˡ idʳ assoc)
-  = mkCategory ⊤ (λ _ _ → ∣_∣) _≡_ (λ _ → e) _∘_ idˡ idʳ assoc
-  
-record Monoid-Hom {ℓ : _} (M₁ M₂ : Monoid {ℓ}) : Set where
-  constructor mkMonoid-Hom
-  open Monoid using (∣_∣; _∘_)
-  open Monoid M₁ using () renaming (e to e₁; _∘_ to _∘₁_)
-  open Monoid M₂ using () renaming (e to e₂; _∘_ to _∘₂_)
-  field
-    map : ∣ M₁ ∣ → ∣ M₂ ∣
-    map-e : map e₁ ≡ e₂
-    map-∘ : {a b : ∣ M₁ ∣} → map (a ∘₁ b) ≡ map a ∘₂ map b
+SET₀ = SET {lzero}
 
-Monoid-Hom-refl : {ℓ : _} (a : Monoid {ℓ}) → Monoid-Hom a a
-Monoid-Hom-refl (mkMonoid ∣_∣ e _∘_ idˡ idʳ assoc)
-  = mkMonoid-Hom id refl refl 
-
-Monoid-Hom-trans : {ℓ : _} {a b c : Monoid {ℓ}} → Monoid-Hom b c → Monoid-Hom a b → Monoid-Hom a c
-Monoid-Hom-trans (mkMonoid-Hom map map-e map-∘) (mkMonoid-Hom map₁ map-e₁ map-∘₁)
-  = mkMonoid-Hom (map ∘′ map₁) (cong map map-e₁ ∙ map-e) (cong map map-∘₁ ∙ map-∘)
-
-Eq-Monoid-Hom : {ℓ : _} {a b : Monoid {ℓ}} → Monoid-Hom a b → Monoid-Hom a b → Set
-Eq-Monoid-Hom (mkMonoid-Hom map _ _) (mkMonoid-Hom map₁ _ _)
-  = map ≡ map₁
-
-Monoid-Category : {ℓ : _} → Category
-Monoid-Category {ℓ}
-  = mkCategory (Monoid {ℓ}) Monoid-Hom Eq-Monoid-Hom Monoid-Hom-refl Monoid-Hom-trans refl refl refl
-
-SET : Category
-SET
-  = mkCategory Set (λ a b → a → b) _≡_ (λ _ → id) _∘′_ refl refl refl 
-
-record Functor {ℓ₁ ℓ₂ : _} (C : Category {ℓ₁}) (D : Category {ℓ₂}): Set (ℓ₁ ⊔ ℓ₂) where
-  constructor mkFunctor
-  open Category using (∣_∣; Hom; Id)
-  open Category C using () renaming (_∘_ to _∘c_)
-  open Category D using (_≈_) renaming (_∘_ to _∘d_)
+record Func {o ℓ e o′ ℓ′ e′ : _} (C : Cat {o} {ℓ} {e}) (D : Cat {o′} {ℓ′} {e′}) : Set (o ⊔ ℓ ⊔ e ⊔ o′ ⊔ ℓ′ ⊔ e′) where
+  constructor mkFunc
+  open Cat
   field
     F₀ : ∣ C ∣ → ∣ D ∣
-    F₁ : {a b : ∣ C ∣} → Hom C a b → Hom D (F₀ a) (F₀ b)
-    Id≈ : {a : ∣ C ∣} →  F₁ (Id C a) ≈ Id D (F₀ a)
-    comp≈ : {a b c : ∣ C ∣} {f : Hom C b c} {g : Hom C a b}
-      → F₁ (f ∘c g) ≈ F₁ f ∘d F₁ g
+    F₁ : {a b : ∣ C ∣} → C [ a , b ] → D [ F₀ a , F₀ b ]
+    id≈ : {a : ∣ C ∣} → D [ F₁ {a} (id C) ≈ id D ]
+    comp≈ : {a b c : ∣ C ∣} {f : C [ b , c ]} {g : C [ a , b ]}
+      → D [ F₁ (C [ f ∘ g ]) ≈ D [ F₁ f ∘ F₁ g ] ]
 
-_⇒_ = Functor
-
-
+  _₀ = F₀
+  _₁ = F₁
 
 {-
-List-Functor : SET ⇒ SET
-List-Functor
-  = mkFunctor List List-map List-Id≈ List-comp≈
+List-Func : Func SET SET
+List-Func
+  = mkFunc List List-map List-Id≈ List-comp≈
   where
   List-Id≈ : {A : Set} → List-map (id {A = A}) ≡ id {A = List A}
   List-Id≈ i [] = []
@@ -172,9 +168,9 @@ List-Functor
   List-comp≈ i [] = []
   List-comp≈ {f = f} {g} i (x ∷ xs) = f (g x) ∷ List-comp≈ {f = f} {g} i xs
 
-Maybe-Functor : SET ⇒ SET
-Maybe-Functor
-  = mkFunctor Maybe Maybe-map Maybe-Id≈ Maybe-comp≈
+Maybe-Func : Func SET SET
+Maybe-Func
+  = mkFunc Maybe Maybe-map Maybe-Id≈ Maybe-comp≈
   where
   Maybe-Id≈ : {A : Set} → Maybe-map (id {A = A}) ≡ id {A = Maybe A}
   Maybe-Id≈ i (just x) = just x
@@ -184,38 +180,56 @@ Maybe-Functor
     → Maybe-map (f ∘′ g) ≡ Maybe-map f ∘′ Maybe-map g
   Maybe-comp≈ {f = f} {g} i (just x) = just (f (g x))
   Maybe-comp≈ i nothing = nothing
+-}
 
-U-Monoid→Set : {ℓ : _} → Monoid-Category {ℓ} ⇒ SET
-U-Monoid→Set
-  = mkFunctor Monoid.∣_∣ Monoid-Hom.map refl refl
 
-record NaturalTransformation {ℓ₁ ℓ₂ : _} {C : Category {ℓ₁}} {D : Category {ℓ₂}}
-  (F G : Functor C D) : Set (ℓ₁ ⊔ ℓ₂) where
+{-
+U-Mon→Set : {ℓ : _} → Func (Mon-Cat {ℓ}) SET
+U-Mon→Set
+  = mkFunc Mon.Obj Mon-Hom.map refl refl
+-}
+
+record NT {o ℓ e o′ ℓ′ e′ : _} {C : Cat {o} {ℓ} {e}} {D : Cat {o′} {ℓ′} {e′}}
+  (F G : Func C D) : Set (o ⊔ ℓ ⊔ e ⊔ e′ ⊔ ℓ′ ⊔ e′) where
   constructor mkNT
-  open Category using (∣_∣; Hom)
-  open Category D using (_∘_; _≈_)
-  open Functor F renaming (F₀ to F₀; F₁ to F₁)
-  open Functor G renaming (F₀ to G₀; F₁ to G₁)  
+  open Cat
+  open Func
   field
-    α : (a : ∣ C ∣) → Hom D (F₀ a) (G₀ a)
-    commute : {a b : ∣ C ∣} (f : Hom C a b)
-      → α b ∘ F₁ f ≈ G₁ f ∘ α a
+    α : (a : ∣ C ∣) → D [ (F ₀) a , (G ₀) a ]
+    commute : {a b : ∣ C ∣} (f : C [ a , b ])
+      → D [ D [ α b ∘ (F ₁) f ] ≈ D [ (G ₁) f ∘ α a ] ]
 
-_~_ = NaturalTransformation
-
-head-NT : List-Functor ~ Maybe-Functor
+{-
+head-NT : NT List-Func Maybe-Func
 head-NT = mkNT (λ _ → head) commute
   where
-  open Category SET
+  open Cat SET
   commute : {A B : Set} (f : A → B) → head ∘ List-map f ≡ Maybe-map f ∘ head
   commute f i [] = nothing
   commute f i (x ∷ _) = just (f x)
-
-record Algebra {ℓ₁ : _} {C : Category {ℓ₁}} (F : C ⇒ C) : Set ℓ₁ where
-  open Category C
-  open Functor F
-  field
-    c : ∣_∣
-    f : Hom (F₀ c) c
-
 -}
+
+{-
+record Alg {ℓ₁ : _} {C : Cat {ℓ₁}} (F : Func C C) : Set ℓ₁ where
+  open Cat C
+  open Func F
+  field
+    c : Obj
+    f : Hom (F₀ c) c
+-}
+
+postulate
+  NT-refl : {a : Func SET₀ SET₀} → NT a a
+
+  NT-trans : {a b c : Func SET₀ SET₀} → NT b c → NT a b → NT a c
+  NT-id-r : {a b : Func SET₀ SET₀} {f : NT a b} → NT-trans NT-refl f ≡ f
+  NT-id-l : {a b : Func SET₀ SET₀} {f : NT a b} → NT-trans f NT-refl ≡ f
+  NT-assoc : {a b c d : Func SET₀ SET₀} {f : NT c d} {g : NT b c} {h : NT a b}
+    → NT-trans (NT-trans f g) h ≡ NT-trans f (NT-trans g h)
+
+
+SET₀⇒SET₀ : Cat {lsuc lzero} {lsuc lzero} {lsuc lzero}
+SET₀⇒SET₀ = mkCat (Func SET₀ SET₀) NT _≡_ NT-refl NT-trans NT-id-r NT-id-l NT-assoc
+
+
+
