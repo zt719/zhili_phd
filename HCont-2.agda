@@ -57,6 +57,24 @@ HCont A = HCont-NF • A
 ⟦ set ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
+-- (a : ⟦ A ⟧T) → ⟦ A ⟧F a
+{-
+S : Set
+P : S → Set
+
+⟦ S ◁ P ⟧ X = Σ[ s : S ] (P s → X)
+-- is a functor
+
+Cont (S ◁ P) (T ◁ Q) = Σ[ f : S → T ] (s : S) → Q (f s) → P s
+-- is natural transformation
+-- every natural transformation bewteen containers gives rise to container morphism
+   Cont → Func is full and faithful (f & f) 
+Q1 : How to define morphisms between higher containers?
+Q2 : IS this also f&f ?
+
+-}
+
+
 ⟦_⟧C : Con → Set
 ⟦ • ⟧C = ⊤
 ⟦ Γ ▷ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
