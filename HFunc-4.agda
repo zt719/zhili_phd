@@ -3,7 +3,7 @@
 {- tree types, with dom and appT -}
 
 open import Data.Product
-open import Data.Unit hiding (_≤_)
+open import Data.Unit
 open import Data.Empty
 open import Relation.Binary.PropositionalEquality
 open import Data.Nat
