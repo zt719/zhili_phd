@@ -72,6 +72,22 @@ Cont (S ◁ P) (T ◁ Q) = Σ[ f : S → T ] (s : S) → Q (f s) → P s
 Q1 : How to define morphisms between higher containers?
 Q2 : IS this also f&f ?
 
+What do we want to do.
+
+1. That every HCont gives rise to a heredetary higher functor
+   HCont A -> HFunc A
+2. Define HCont morphism and show that they give rise to the corresponding nat-tfns.
+2-1.   Is this full & faithful
+3.* Show that HCont is a model of STLC. Related to hereditary normalisation.
+  https://dl.acm.org/doi/pdf/10.1145/1863597.1863601
+4. Construct inductive and coinductive types.
++...
+
+
+
+
+
+
 -}
 
 
