@@ -1,6 +1,6 @@
 {-# OPTIONS --guardedness --cubical #-}
 
-module 2-Container where
+module 2Cont where
 
 open import Cubical.Data.Empty using (⊥)
 open import Cubical.Data.Unit renaming (Unit to ⊤)

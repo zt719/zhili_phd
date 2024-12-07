@@ -1,27 +1,24 @@
-{-# OPTIONS --guardedness #-}
+{-# OPTIONS --type-in-type #-}
 
-module HFunc where
+{- tree types, with dom and appT -}
 
-open import Data.Unit
-open import Data.Sum
 open import Data.Product
-open import Data.Nat
-open import Data.Maybe
+open import Data.Unit
+open import Data.Empty
 open import Relation.Binary.PropositionalEquality
-  hiding ([_])
-open import Function.Base
 
-infixr 5 _⇒_
+{- Syntax -}
+
 data Ty : Set where
   set : Ty
   _⇒_ : Ty → Ty → Ty
 
-infixl 5 _▷_
 data Con : Set where
   • : Con
   _▷_ : Con → Ty → Con
 
--- dom (A ⇒ B ⇒ set) = • ▷ B ▷ A
+infixl 5 _▷_
+
 dom : Ty → Con
 dom set = •
 dom (A ⇒ B) = dom B ▷ A
@@ -29,92 +26,63 @@ dom (A ⇒ B) = dom B ▷ A
 variable A B C : Ty
 variable Γ Δ : Con
 
-⟦_⟧T : Ty → Set₁
+⟦_⟧T : Ty → Set
 ⟦ set ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
-data Unit : Set₁ where
-  * : Unit
-
-⟦_⟧C : Con → Set₁
-⟦ • ⟧C = Unit
-⟦ Γ ▷ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
-
-TT = (set ⇒ set) ⇒ set ⇒ set
-
-{-
-record Func : Set₁ where
+record Cat (Obj : Set) : Set where
   field
-    T₀ : Set → Set
-    T₁ : {X Y : Set} → (X → Y) → T₀ X → T₀ Y
-    T-id : {X : Set} → T₁ {X} id ≡ id
-    T-∘ : {X Y Z : Set} {f : Y → Z} {g : X → Y}
-      → T₁ (f ∘ g) ≡ T₁ f ∘ T₁ g
+    Hom : Obj → Obj → Set
+    _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
+    ass : ∀ {W X Y Z}{f : Hom X W}{g : Hom Y X}{h : Hom Z Y}
+          → (f ∘ g) ∘ h ≡ f ∘ (g ∘ h)
 
-record Func₁ : Set₁ where
-  field
-    T₀ : (Set → Set) × Set → Set
-    T₁ : {F G : Set → Set} → ({X : Set} → F X → G X)
-      → {X : Set} → T₀ (F , X) → T₀ (G , X)
-    T-id : {F : Set → Set} {X : Set} → T₁ {F} id {X} ≡ id
-    T-∘ : {F G H : Set → Set} {α : {X : Set} → G X → H X}
-      → {β : {X : Set} → F X → G X}
-      → {X : Set} → T₁ (α {X} ∘ β) {X} ≡ T₁ α ∘ T₁ β
+open Cat
 
-record Func₂ : Set₁ where
+record Func {X Y : Set}(C : Cat X)(D : Cat Y)(F : X → Y) : Set where
+  open Cat C renaming (_∘_ to _∘C_)
+  open Cat D renaming (_∘_ to _∘D_)  
   field
-    T₀ : (Set × Set → Set) × (Set → Set) → Set
-    T₁ : {F G : Set × Set → Set} → ({X : Set × Set} → F X → G X)
-      → {X : Set → Set} → T₀ (F , X) → T₀ (G , X)
-    T-id : {F : Set × Set → Set} {X : Set → Set} → T₁ {F} id {X} ≡ id
+    fmap : ∀ {X Y} → Hom C X Y → Hom D (F X) (F Y) 
+    fmap∘ : ∀ {X Y Z}{f : Hom C Y Z}{g : Hom C X Y}
+          → fmap (f ∘C g) ≡ (fmap f) ∘D (fmap g)
 
-record Func₃ : Set₁ where
+open Func
+
+record Nat {X Y : Set}(C : Cat X)(D : Cat Y)(F G : X → Y)
+           (FF : Func C D F)(GG : Func C D G) : Set where
+  open Cat D renaming (_∘_ to _∘D_)  
   field
-    T₀ : (Set × (Set → Set) → Set) × (Set → Set) × Set → Set
-    T₁ : {F G : Set × (Set → Set) → Set} 
-      → ({X : Set × (Set → Set)} → F X → G X)
-      → {X : (Set → Set) × Set} → T₀ (F , X) → T₀ (G , X)
-    T-id : {F : Set × (Set → Set) → Set} {X : (Set → Set) × Set} → T₁ {F} id {X} ≡ id
+    α : (x : X) → Hom D (F x) (G x)
+    nat : {x y : X}(f : Hom C x y) →
+          fmap GG f ∘D α x ≡ α y ∘D fmap FF f
+               
+⟦_⟧F : (A : Ty) → ⟦ A ⟧T → Set
+⟦_⟧C : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧F)
+
+⟦ set ⟧F X = ⊤
+⟦ A ⇒ B ⟧F F = Σ[ FF ∈ ((X : ⟦ A ⟧T) → ⟦ A ⟧F X → ⟦ B ⟧F (F X)) ]
+               Func ⟦ A ⟧C ⟦ B ⟧C λ (X , XX) → (F X) , (FF X XX)
+
+⟦ set ⟧C = record { Hom = λ (X , _) (Y , _) → X → Y
+                 ; _∘_ = λ f g x → f (g x)
+                 ; ass = refl }
+
+⟦ A ⇒ B ⟧C = record { Hom = λ (F , FF , FFF) (G , GG , GGG) → {!!} ; _∘_ = {!!} ; ass = {!!} }
+{-                 
+⟦ A ⇒ B ⟧C = record {
+        Hom = λ (F , (FF , FFF)) (G , (GG , GGG)) →
+          Nat ⟦ A ⟧C ⟦ B ⟧C (λ (A , AA) → F A  , FF A AA)
+                           (λ (A , AA) → G A  , GG A AA) FFF GGG
+       ; _∘_ = {!!} ; ass = {!!} }
+      where open Cat ⟦ A ⟧C
 -}
-
-record HFunc (A B : Ty) : Set₁ where
-  field
-    T₀ : (⟦ dom A ⟧C → Set) → ⟦ dom B ⟧C → Set
-    T₁ : {F G : ⟦ dom A ⟧C → Set} → ({X : ⟦ dom A ⟧C} → F X → G X)
-      → {X : ⟦ dom B ⟧C} → T₀ F X → T₀ G X
-    T-id : {F : ⟦ dom A ⟧C → Set} {X : ⟦ dom B ⟧C } → T₁ {F} id {X} ≡ id
-    T-∘  : {F G H : ⟦ dom A ⟧C → Set} {α : {X : ⟦ dom A ⟧C} → G X → H X}
-      {β : {X : ⟦ dom A ⟧C} → F X → G X} {X : ⟦ dom B ⟧C} → T₁ {F} (α ∘ β) {X} ≡ T₁ α ∘ T₁ β
-open HFunc      
-
-postulate
-  funExt : {A : Set} {P : A → Set} {f g : (x : A) → P x} → ((x : A) → f x ≡ g x) → f ≡ g
-
-Maybe-Func : HFunc set set
-T₀ Maybe-Func x * = Maybe (x *)
-T₁ Maybe-Func f {*} (just x) = just (f x)
-T₁ Maybe-Func f {*} nothing = nothing
-T-id Maybe-Func {X = *} = funExt λ{ (just x) → refl ; nothing → refl }
-T-∘ Maybe-Func {X = *} = funExt λ{ (just x) → refl ; nothing → refl }
-
-L : (Set → Set) → Set → Set
-L F X = ⊤ ⊎ X × F X
-
-L-Func : HFunc (set ⇒ set) (set ⇒ set)
-T₀ L-Func F X = L (curry F *) (proj₂ X)
-T₁ L-Func f (inj₁ tt) = inj₁ tt
-T₁ L-Func f (inj₂ (x , xs)) = inj₂ (x , f xs)
-T-id L-Func = funExt λ{ (inj₁ tt) → refl ; (inj₂ (x , xs)) → refl }
-T-∘ L-Func = funExt λ{ (inj₁ tt) → refl ; (inj₂ (x , xs)) → refl }
-
 {-
-H : (Set → Set) → Set → Set
-H F X = X × F (F X)
+⟦ A ⇒ B ⟧C :
+Cat (Σ ⟦ A ⇒ B ⟧T ⟦ A ⇒ B ⟧F)
+= Cat (Σ (F ∈ ⟦ A ⟧T → ⟦ B ⟧T) (⟦ A ⇒ B ⟧F F))
+= Cat (Σ (F ∈ ⟦ A ⟧T → ⟦ B ⟧T)
+      (Σ FF : (X : ⟦ A ⟧T) → ⟦ A ⟧F X → ⟦ B ⟧F (F X))
+         Func ⟦ A ⟧C ⟦ B ⟧C λ (X , XX) → (F X) , (FF X XX)
 
-H-Func : HFunc (set ⇒ set) (set ⇒ set)
-HFunc.T₀ H-Func x y = H (curry x *) (proj₂ y)
-proj₁ (HFunc.T₁ H-Func α (x , ffx)) = x 
-proj₂ (HFunc.T₁ H-Func α (x , ffx)) = HFunc.T₁ {!!} {!!} {!!}
-HFunc.T-id H-Func = {!!}
-HFunc.T-∘ H-Func = {!!}
 -}
