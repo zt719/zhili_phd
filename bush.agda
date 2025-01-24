@@ -3,14 +3,9 @@
 module Bush where
 
 open import Cubical.Foundations.Prelude
-open import Cubical.Foundations.Equiv
 open import Cubical.Foundations.Isomorphism
-
-open import Cubical.Data.Nat using (ℕ; zero; suc)
-open import Cubical.Data.Sigma
-open import Cubical.Data.Sum
   
-record Bush (A : Set) : Set where
+record Bush (A : Type) : Type where
   coinductive
   field
     head : A
@@ -18,46 +13,46 @@ record Bush (A : Set) : Set where
 open Bush
 
 {-# TERMINATING #-}
-Bush₁ : {X Y : Set} → (X → Y) → Bush X → Bush Y
+Bush₁ : {X Y : Type} → (X → Y) → Bush X → Bush Y
 head (Bush₁ f bx) = f (head bx)
 tail (Bush₁ f bx) = Bush₁ (Bush₁ f) (tail bx)
 
 private module _ where
 
-  data BT : Set where
+  data BT : Type where
     leaf : BT
     node : BT → BT → BT
 
   {-# TERMINATING #-}
-  φ₁ : {A : Set} → (BT → A) → Bush A
-  head (φ₁ f) = f leaf
-  tail (φ₁ f) = φ₁ (λ l → φ₁ (λ r → f (node l r)))
+  φ : {A : Type} → (BT → A) → Bush A
+  head (φ f) = f leaf
+  tail (φ f) = φ (λ l → φ (λ r → f (node l r)))
 
-  ψ₁ : {A : Set} → Bush A → BT → A
-  ψ₁ bsh leaf = head bsh
-  ψ₁ bsh (node l r) = ψ₁ (ψ₁ (tail bsh) l) r
+  ψ : {A : Type} → Bush A → BT → A
+  ψ bsh leaf = head bsh
+  ψ bsh (node l r) = ψ (ψ (tail bsh) l) r
 
   {-# TERMINATING #-}
-  retr₁ : {A : Set} (f : BT → A) → ψ₁ (φ₁ f) ≡ f
-  retr₁ f i leaf = f leaf
-  retr₁ f i (node l r) = (
-    ψ₁ (φ₁ f) (node l r)
-      ≡⟨ (λ j → ψ₁ (retr₁ (λ l′ → φ₁ (λ r′ → f (node l′ r′))) j l) r) ⟩
-    ψ₁ (φ₁ (λ r′ → f (node l r′))) r
-      ≡⟨ (λ j → retr₁ (λ r′ → f (node l r′)) j r) ⟩ 
+  retr : {A : Type} (f : BT → A) → ψ (φ f) ≡ f
+  retr f i leaf = f leaf
+  retr f i (node l r) = (
+    ψ (φ f) (node l r)
+      ≡⟨ (λ j → ψ (retr (λ l′ → φ (λ r′ → f (node l′ r′))) j l) r) ⟩
+    ψ (φ (λ r′ → f (node l r′))) r
+      ≡⟨ (λ j → retr (λ r′ → f (node l r′)) j r) ⟩ 
     f (node l r) ∎ 
     ) i
 
   {-# TERMINATING #-}
-  sec₁ : {A : Set} (as : Bush A) → φ₁ (ψ₁ as) ≡ as
-  head (sec₁ as i) = head as
-  tail (sec₁ as i) = (
-    tail (φ₁ (ψ₁ as))
-      ≡⟨ (λ j → φ₁ (λ l′ → sec₁ (ψ₁ (tail as) l′) j)) ⟩
-    φ₁ (ψ₁ (tail as))
-      ≡⟨ sec₁ (tail as) ⟩
+  sec : {A : Type} (as : Bush A) → φ (ψ as) ≡ as
+  head (sec as i) = head as
+  tail (sec as i) = (
+    tail (φ (ψ as))
+      ≡⟨ (λ j → φ (λ l′ → sec (ψ (tail as) l′) j)) ⟩
+    φ (ψ (tail as))
+      ≡⟨ sec (tail as) ⟩
     tail as ∎
     ) i
 
-  thePath₁ : {A : Set} → (BT → A) ≡ Bush A
-  thePath₁ = isoToPath (iso φ₁ ψ₁ sec₁ retr₁)
+  thePath : {A : Type} → (BT → A) ≡ Bush A
+  thePath = isoToPath (iso φ ψ sec retr)

@@ -1,30 +1,15 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --cubical #-}
 
-{- tree types, with dom and appT -}
-
-open import Data.Product
-open import Data.Unit
-open import Data.Empty
-open import Relation.Binary.PropositionalEquality
+open import Cubical.Foundations.Prelude
+open import Cubical.Data.Unit
+open import Cubical.Data.Sigma
+open import Cubical.Data.Sum
 
 {- Syntax -}
 
 data Ty : Set where
   set : Ty
   _⇒_ : Ty → Ty → Ty
-
-data Con : Set where
-  • : Con
-  _▷_ : Con → Ty → Con
-
-infixl 5 _▷_
-
-dom : Ty → Con
-dom set = •
-dom (A ⇒ B) = dom B ▷ A
-
-variable A B C : Ty
-variable Γ Δ : Con
 
 ⟦_⟧T : Ty → Set
 ⟦ set ⟧T = Set
@@ -33,56 +18,76 @@ variable Γ Δ : Con
 record Cat (Obj : Set) : Set where
   field
     Hom : Obj → Obj → Set
+    id : ∀ {X} → Hom X X
     _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
-    ass : ∀ {W X Y Z}{f : Hom X W}{g : Hom Y X}{h : Hom Z Y}
+    idl : ∀ {X Y} {f : Hom X Y} → id ∘ f ≡ f
+    idr : ∀ {X Y} {f : Hom X Y} → f ∘ id ≡ f
+    ass : ∀ {W X Y Z} {f : Hom X W} {g : Hom Y X} {h : Hom Z Y}
           → (f ∘ g) ∘ h ≡ f ∘ (g ∘ h)
 
-open Cat
-
 record Func {X Y : Set}(C : Cat X)(D : Cat Y)(F : X → Y) : Set where
+  open Cat
   open Cat C renaming (_∘_ to _∘C_)
   open Cat D renaming (_∘_ to _∘D_)  
   field
-    fmap : ∀ {X Y} → Hom C X Y → Hom D (F X) (F Y) 
-    fmap∘ : ∀ {X Y Z}{f : Hom C Y Z}{g : Hom C X Y}
+    fmap : ∀ {X Y} → Hom C X Y → Hom D (F X) (F Y)
+    fmapid : ∀ {X} → fmap {X} (id C) ≡ id D
+    fmap∘ : ∀ {X Y Z} (f : Hom C Y Z) (g : Hom C X Y)
           → fmap (f ∘C g) ≡ (fmap f) ∘D (fmap g)
-
-open Func
 
 record Nat {X Y : Set}(C : Cat X)(D : Cat Y)(F G : X → Y)
            (FF : Func C D F)(GG : Func C D G) : Set where
-  open Cat D renaming (_∘_ to _∘D_)  
+  open Cat
+  open Cat D renaming (_∘_ to _∘D_)
+  open Func
   field
-    α : (x : X) → Hom D (F x) (G x)
-    nat : {x y : X}(f : Hom C x y) →
-          fmap GG f ∘D α x ≡ α y ∘D fmap FF f
-               
+    η : ∀ X → Hom D (F X) (G X)
+    nat : ∀ {X Y} (f : Hom C X Y) →
+          fmap GG f ∘D η X ≡ η Y ∘D fmap FF f
+
 ⟦_⟧F : (A : Ty) → ⟦ A ⟧T → Set
 ⟦_⟧C : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧F)
 
-⟦ set ⟧F X = ⊤
+⟦ set ⟧F X = Unit
 ⟦ A ⇒ B ⟧F F = Σ[ FF ∈ ((X : ⟦ A ⟧T) → ⟦ A ⟧F X → ⟦ B ⟧F (F X)) ]
-               Func ⟦ A ⟧C ⟦ B ⟧C λ (X , XX) → (F X) , (FF X XX)
+               Func ⟦ A ⟧C ⟦ B ⟧C λ (X , XX) → F X , FF X XX
 
-⟦ set ⟧C = record { Hom = λ (X , _) (Y , _) → X → Y
-                 ; _∘_ = λ f g x → f (g x)
-                 ; ass = refl }
+⟦ set ⟧C = record
+  { Hom = λ (X , _) (Y , _) → X → Y
+  ; id = λ x → x
+  ; _∘_ = λ f g x → f (g x)
+  ; idl = refl
+  ; idr = refl
+  ; ass = refl
+  }
 
-⟦ A ⇒ B ⟧C = record { Hom = λ (F , FF , FFF) (G , GG , GGG) → {!!} ; _∘_ = {!!} ; ass = {!!} }
-{-                 
-⟦ A ⇒ B ⟧C = record {
-        Hom = λ (F , (FF , FFF)) (G , (GG , GGG)) →
-          Nat ⟦ A ⟧C ⟦ B ⟧C (λ (A , AA) → F A  , FF A AA)
-                           (λ (A , AA) → G A  , GG A AA) FFF GGG
-       ; _∘_ = {!!} ; ass = {!!} }
-      where open Cat ⟦ A ⟧C
--}
-{-
-⟦ A ⇒ B ⟧C :
-Cat (Σ ⟦ A ⇒ B ⟧T ⟦ A ⇒ B ⟧F)
-= Cat (Σ (F ∈ ⟦ A ⟧T → ⟦ B ⟧T) (⟦ A ⇒ B ⟧F F))
-= Cat (Σ (F ∈ ⟦ A ⟧T → ⟦ B ⟧T)
-      (Σ FF : (X : ⟦ A ⟧T) → ⟦ A ⟧F X → ⟦ B ⟧F (F X))
-         Func ⟦ A ⟧C ⟦ B ⟧C λ (X , XX) → (F X) , (FF X XX)
+⟦ A ⇒ B ⟧C = record
+  { Hom = λ (F , FF , FFF) (G , GG , GGG)
+    → Nat ⟦ A ⟧C ⟦ B ⟧C (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
+  ; id = record { η = λ x → id ; nat = λ f → idr ∙ sym idl }
+  ; _∘_ = λ{ record { η = η ; nat = nat } record { η = β ; nat = nat₁ }
+    → record { η = λ x → η x ∘ β x ; nat = λ f → sym ass ∙ cong (_∘ _) (nat f)
+              ∙ ass ∙ cong (_ ∘_) (nat₁ f) ∙ sym ass } }
+  ; idl = _
+  ; idr = _
+  ; ass = _
+  }
+  where
+    open Cat ⟦ B ⟧C
 
--}
+TN : ⟦ set ⇒ set ⟧T
+TN X = Unit ⊎ X
+
+FN : ⟦ set ⇒ set ⟧F TN
+FN = _ , record
+  { fmap = λ{ f (inl tt) → inl tt ; f (inr x) → inr (f x) }
+  ; fmapid = λ{ i (inl tt) → inl tt ; i (inr x) → inr x }
+  ; fmap∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr x) → inr (f (g x)) }
+  }
+
+TL : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧T
+TL F X = Unit ⊎ F X
+
+FL : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧F TL
+FL = (λ F (_ , F₁) → _ , record
+  { fmap = λ x x₁ → {!!} ; fmapid = {!!} ; fmap∘ = {!!} }) , {!!}
