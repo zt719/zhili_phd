@@ -1,6 +1,6 @@
 {-# OPTIONS --cubical #-}
 
-module Cont where
+module Cont.Cont where
 
 open import Function.Base
 open import Cubical.Foundations.Prelude hiding (_◁_)
@@ -27,9 +27,9 @@ postulate
     → Nat.η α ≡ Nat.η β → α ≡ β
 
 -- Container
-infix  0 _◁_
+infix  0 _◃_
 record Cont : Type₁ where
-  constructor _◁_
+  constructor _◃_
   field
     S : Type
     P : S → Type
@@ -38,7 +38,7 @@ private variable SP TQ WR : Cont
 
 -- Container Hom
 record Cont[_,_] (SP TQ : Cont) : Type where
-  constructor _◁_
+  constructor _◃_
   open Cont SP
   open Cont TQ renaming (S to T; P to Q)
   field
@@ -60,7 +60,7 @@ record ⟦_⟧ (SP : Cont) (X : Type) : Type where
 
 ⟦_⟧₂ : {SP TQ : Cont} (uf : Cont[ SP , TQ ])
   → (X : Type) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-⟦ u ◁ f ⟧₂ X (s , h) = u s , h ∘ f s
+⟦ u ◃ f ⟧₂ X (s , h) = u s , h ∘ f s
 
 C→F : Cont → Func
 C→F SP = record
@@ -84,9 +84,9 @@ module _ {α : Nat (C→F SP) (C→F TQ)} where
   open ⟦_⟧
 
   N→CH : Nat (C→F SP) (C→F TQ) → Cont[ SP , TQ ]
-  N→CH α = s ∘ m ◁ p ∘ m
+  N→CH α = s ∘ m ◃ p ∘ m
     where
-      m : (s : S) → ⟦ T ◁ Q ⟧ (P s)
+      m : (s : S) → ⟦ T ◃ Q ⟧ (P s)
       m s = η (P s) (s , id)
 
   uf′ : Cont[ SP , TQ ]
@@ -94,3 +94,7 @@ module _ {α : Nat (C→F SP) (C→F TQ)} where
 
   path : CH→N uf′ ≡ α
   path = Nat≡ (λ i X (s , f) → nat f i (s , id))
+
+_∘c_ : Cont → Cont → Cont
+(S ◃ P) ∘c (T ◃ Q) =
+  Σ[ s ∈ S ] (P s → T) ◃ λ{ (s , f) → Σ[ p ∈ P s ] Q (f p) }
