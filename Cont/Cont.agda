@@ -3,7 +3,7 @@
 module Cont.Cont where
 
 open import Function.Base
-open import Cubical.Foundations.Prelude hiding (_◁_)
+open import Cubical.Foundations.Prelude
 
 -- Functor & Natural Transformation
 
@@ -53,10 +53,9 @@ record ⟦_⟧ (SP : Cont) (X : Type) : Type where
     s : S
     p : P s → X
 
-⟦_⟧₁ : (SP : Cont)
-  → {X Y : Type} → (X → Y)
-  → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
-⟦ SP ⟧₁ f (s , g) = s , f ∘ g
+⟦_⟧₁ : (FC : Cont) → {X Y : Type} → (X → Y) → ⟦ FC ⟧ X → ⟦ FC ⟧ Y
+⟦ FC ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
+{-# INLINE ⟦_⟧₁ #-}
 
 ⟦_⟧₂ : {SP TQ : Cont} (uf : Cont[ SP , TQ ])
   → (X : Type) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
@@ -97,4 +96,13 @@ module _ {α : Nat (C→F SP) (C→F TQ)} where
 
 _∘c_ : Cont → Cont → Cont
 (S ◃ P) ∘c (T ◃ Q) =
-  Σ[ s ∈ S ] (P s → T) ◃ λ{ (s , f) → Σ[ p ∈ P s ] Q (f p) }
+  Σ[ s ∈ S ] (P s → T) ◃ λ (s , f) → Σ[ p ∈ P s ] Q (f p)
+{-
+  ⟦ S ◃ P ⟧ (⟦ T ◃ Q ⟧ X)
+= Σ[ s ∈ S ] (P s → Σ[ t ∈ T ] (Q t → X))
+= Σ[ s ∈ S ] Σ[ f ∈ (P s → T) ] (p : P s) → Q (f p) → X
+= Σ[ sf ∈ Σ[ s ∈ S ] (P s → T) ] (p : P (fst sf)) → Q ((snd sf) p) → X
+= Σ[ sf ∈ Σ[ s ∈ S ] (P s → T) ] (Σ[ p ∈ P (fst sf)) ] (Q ((snd sf) p)) → X)
+= ⟦ Σ[ s ∈ S ] (P s → T) ◃ λ sf → Σ[ p ∈ P (fst sf) ] (Q (snd sf) p) ⟧ X
+= ⟦ Σ[ s ∈ S ] (P s → T) ◃ λ (s , f) → Σ[ p ∈ P s ] (Q f p) ⟧ X
+-}
