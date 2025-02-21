@@ -54,12 +54,13 @@ record ⟦_⟧ (SP : Cont) (X : Type) : Type where
     p : P s → X
 
 ⟦_⟧₁ : (FC : Cont) → {X Y : Type} → (X → Y) → ⟦ FC ⟧ X → ⟦ FC ⟧ Y
-⟦ FC ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
-{-# INLINE ⟦_⟧₁ #-}
+-- ⟦ FC ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
+⟦ FC ⟧₁ k (s , p) = s , k ∘ p
+-- {-# INLINE ⟦_⟧₁ #-}
 
 ⟦_⟧₂ : {SP TQ : Cont} (uf : Cont[ SP , TQ ])
   → (X : Type) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-⟦ u ◃ f ⟧₂ X (s , h) = u s , h ∘ f s
+⟦ f ◃ g ⟧₂ X (s , p) = f s , p ∘ g s
 
 C→F : Cont → Func
 C→F SP = record

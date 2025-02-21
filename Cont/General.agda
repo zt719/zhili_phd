@@ -5,96 +5,64 @@ open import Function.Base
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
   renaming (Iso to _≅_)
-open import Cubical.Data.Unit
 
 open import Cont.Cont
 open import Data.Pullback
 
 module Cont.General where
 
-postulate
-  X Y : Set
-  f : X → Y
-  S : Set
-  P : S → Set
-
-MC : Cont
-MC = S ◃ P
-
-M : Set → Set
-M = ⟦ MC ⟧
-
-M₁ : {X Y : Set} → (X → Y) → M X → M Y
-M₁ = ⟦ MC ⟧₁
-  
-T : Set
-T = Unit
-  
-Q : Unit → Set
-Q tt = Unit
-
-IdC : Cont
-IdC = T ◃ Q
-
-Id : Set → Set
-Id = ⟦ IdC ⟧
-
-MCMC : Cont
-MCMC = MC ∘c MC
-
-
-postulate
-  u : T → S
-  g : (t : T) → P (u t) → Q t
-  -- 𝐮 : Σ[ s ∈ S ] (P s → S) → S
-  -- 𝐠 : (sf : Σ[ s ∈ S ] (P s → S)) → P (𝐮 sf) → Σ[ p ∈ P (fst sf) ] (P ((snd sf) p))
-
-ηC : Cont[ IdC , MC ]
-ηC = u ◃ g
-  
-η : (X : Set) → X → M X
-η X x = ⟦ ηC ⟧₂ X (tt , λ{ tt → x })
-
-{-
-μC : Cont[ MC ∘c MC , MC ]
-μC = 𝐮 ◃ 𝐠
-
-μ : (X : Set) → M (M X) → M X
-μ X (s , p) = ⟦ μC ⟧₂ X (({!!} , {!!}) , {!!})
-
-postulate
-  M-idl : (X : Set) → μ X ∘ η (M X) ≡ id
-  M-idr : (X : Set) → μ X ∘ M₁ (η X) ≡ id
-  M-ass : (X : Set) → μ X ∘ μ (M X) ≡ μ X ∘ M₁ (μ X)
--}
-
-φ : X → Pullback (M₁ f) (η Y)
-φ x = η _ x , f x , refl
-
-{-
-ψ : M (M X) → Pullback (M₁ f) (μ Y)
-ψ mmx = μ _ mmx , M₁ (M₁ f) mmx , {!!}
--}
-
 module _ 
-  {g⁻ : (t : T) → Q t → P (u t)}
-  {left : {t : T} → g t ∘ g⁻ t ≡ id}
-  {right : {t : T} → g⁻ t ∘ g t ≡ id}
+  (S : Set)
+  (P : S → Set)
+  (T : Set)
+  (Q : T → Set)
+  (f : S → T)
+  (g : (s : S) → Q (f s) → P s)
   where
 
-  φ⁻ : Pullback (M₁ f) (η Y) → X
-  φ⁻ ((s , p) , y , eq) = p (subst P {!!} (g⁻ tt tt))
+  φ : {X Y : Set} (k : X → Y)
+    → ⟦ S ◃ P ⟧ X
+    → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧₂ Y)
+  φ k (s , p) = (f s , p ∘ g s) , (s , k ∘ p) , refl
 
-  -- isPullback : X ≅ Pullback (M₁ f) (η Y)
-  -- isPullback = {!!}
+  module _
+    {g⁻ : (s : S) → P s → Q (f s)}
+    {g∘g⁻ : (s : S) → g s ∘ g⁻ s ≡ id}
+    {g⁻∘g : (s : S) → g⁻ s ∘ g s ≡ id}  
+    where
 
-{-
-module _
-  {φ⁻ : Pullback (M₁ f) (η Y) → X}
-  {left : φ ∘ φ⁻ ≡ id}
-  {right : φ⁻ ∘ φ ≡ id}
-  where
+    φ⁻ : {X Y : Set} (k : X → Y)
+      → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧₂ Y)
+      → ⟦ S ◃ P ⟧ X
+    φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.s = s
+    φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.p = q ∘ transport (cong Q (sym eq-s)) ∘ g⁻ s 
+      where
+        eq-s : t ≡ f s
+        eq-s = cong ⟦_⟧.s eq
 
-  g⁻ : (t : T) → Q t → P (u t)
-  g⁻ tt tt = {!u tt!}
--}
+  φ∘φ⁻ : {X Y : Set} (k : X → Y) → φ k ∘ φ⁻ k ≡ id
+  φ∘φ⁻ {X} {Y} k i ((t , q) , (s , p') , eq) = ((eq-s (~ i)) , {!!}) , {!!}
+  
+    where
+      eq-s : t ≡ f s
+      eq-s = cong ⟦_⟧.s eq
+
+      -- eq-p : PathP (λ i₁ → Q (eq i₁ .⟦_⟧.s) → Y)
+      --  (⟦_⟧.p (⟦ T ◃ Q ⟧₁ k (t , q)))
+      --  (⟦_⟧.p (⟦ f ◃ g ⟧₂ Y (s , p')))
+      -- eq-p = {!!}
+
+ {-
+   φ⁻∘φ : {X Y : Set} (k : X → Y) → φ⁻ k ∘ φ k ≡ id
+   φ⁻∘φ k i (s , p) = s , λ ps → {!!}
+ -}
+
+
+  module _
+    {φ⁻ : {X Y : Set} (k : X → Y) → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧₂ Y) → ⟦ S ◃ P ⟧ X}
+    {φ⁻∘φ : {X Y : Set} (k : X → Y) → φ⁻ k ∘ φ k ≡ id}
+    {φ∘φ⁻ : {X Y : Set} (k : X → Y) → φ k ∘ φ⁻ k ≡ id}
+    where
+
+    g⁻ : (s : S) → P s → Q (f s)
+    g⁻ s ps = (φ⁻ (g s) ((f s , id) , (s , id) , refl)) .⟦_⟧.p {!!} --ps

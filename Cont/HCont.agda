@@ -28,14 +28,15 @@ variable Γ Δ : Con
 
 data Var : Con → Ty → Set where
   zero : Var (Γ ▷ A) A
-  suc : Var Γ A → Var (Γ ▷ B) A
+  suc  : Var Γ A → Var (Γ ▷ B) A
 
-record HCont-Set (Γ : Con) : Set 
+record HCont-Set (Γ : Con) : Set
+
 data HCont-NE (Γ : Con) : Con → Set
 
 data HCont-NF : Con → Ty → Set where
   lam : HCont-NF (Γ ▷ A) B → HCont-NF Γ (A ⇒ B)
-  ne : HCont-Set Γ → HCont-NF Γ set
+  ne  : HCont-Set Γ → HCont-NF Γ set
 
 record HCont-Set Γ  where
   inductive

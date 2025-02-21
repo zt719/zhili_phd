@@ -50,7 +50,7 @@ record Nat {X Y : Set}(C : Cat X)(D : Cat Y)(F G : X → Y)
 
 ⟦ set ⟧F X = Unit
 ⟦ A ⇒ B ⟧F F = Σ[ FF ∈ ((X : ⟦ A ⟧T) → ⟦ A ⟧F X → ⟦ B ⟧F (F X)) ]
-               Func ⟦ A ⟧C ⟦ B ⟧C λ (X , XX) → F X , FF X XX
+               Func ⟦ A ⟧C ⟦ B ⟧C (λ (X , XX) → F X , FF X XX)
 
 ⟦ set ⟧C = record
   { Hom = λ (X , _) (Y , _) → X → Y
@@ -85,9 +85,8 @@ FN = _ , record
   ; fmap∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr x) → inr (f (g x)) }
   }
 
-TL : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧T
-TL F X = Unit ⊎ F X
+B : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧T
+B F X = X × F (F X)
 
-FL : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧F TL
-FL = (λ F (_ , F₁) → _ , record
-  { fmap = λ x x₁ → {!!} ; fmapid = {!!} ; fmap∘ = {!!} }) , {!!}
+BF : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧F B
+BF = (λ X x → {!!} , {!!}) , record { fmap = {!!} ; fmapid = {!!} ; fmap∘ = {!!} }

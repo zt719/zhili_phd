@@ -3,15 +3,13 @@
 module DTLC where
 
 open import Cubical.Foundations.Prelude
-  hiding (_,_; _∙_; I)
-open import Cubical.Data.Nat
+  hiding (_,_)
+  renaming (transport to coe; cong to ap)
 
 -- heterogenous equality
-{-
 infix 2 _⊢_≡[_]≡_
 data _⊢_≡[_]≡_ {X : Set}(F : X → Set) : {x y : X} → F x → x ≡ y → F y → Set where
   refl-h : {x : X}{z : F x} → F ⊢ z ≡[ refl ]≡ z
--}
 
 data UU : Set
 data EL : UU → Set
@@ -46,6 +44,7 @@ infixr 20 _⇒_
 infixl 5 _▹_
 infixr 5 _,_
 infixr 9 _∘_
+
 data EL where
   id   : Tms Γ Γ
   _∘_  : Tms Δ Θ → Tms Γ Δ → Tms Γ Θ
@@ -70,18 +69,20 @@ data EL where
   π₁   : Tms Γ (Δ ▹ A) → Tms Γ Δ
   π₂   : (σ : Tms Γ (Δ ▹ A)) → Tm Γ (A [ π₁ σ ]T)
   ▹-β₁ : π₁ (σ , t) ≡ σ
+  ▹-β₂ : π₂ (σ , t) ≡ {!!}
   {-
-  ▹-β₂ : ? ⊢ ? ≡[ ? ]≡ ?
   --(λ σ → Tm Γ (A [ σ ]T)) ⊢ π₂ (δ , t) ≡[ ▹-β₁ ]≡ t
   
   ,-∘  : (σ , t) ∘ δ ≡ σ ∘ δ , t [ δ ]t
 
-  U : Ty
+  -}
+  
+  U : Ty Γ
+  {-
   _⇒_ : Ty → Ty → Ty
   
   ƛ    : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
   ƛ⁻¹  : Tm Γ (A ⇒ B) → Tm (Γ ▹ A) B
-
   _▹-map_ : Tms Γ Δ → (A : Ty) → Tms (Γ ▹ A) (Δ ▹ A)
   ▹-map-≡ : σ ▹-map A ≡ σ ∘ (π₁ id) , π₂ id
   
@@ -89,7 +90,7 @@ data EL where
   ⇒-η : {t : Tm Γ (A ⇒ B)} → ƛ (ƛ⁻¹ t) ≡ t
 
   ƛ-[]t : {t : Tm (Γ ▹ A) B} → (ƛ t) [ σ ]t ≡ ƛ (t [ σ ▹-map A ]t)
-
+  -}
 
 {-
 infix  1 begin_
@@ -111,7 +112,9 @@ begin p = p
   ≡⟨ ▹-β₂ ⟩
     t
   ∎
+-}
 
+{-
 [∘]t : t [ σ ∘ δ ]t ≡ t [ σ ]t [ δ ]t
 [∘]t {t = t} {σ = σ} {δ = δ} =
   begin
@@ -131,60 +134,16 @@ begin p = p
   ≡⟨ ▹-β₂ ⟩
     t [ σ ]t [ δ ]t
   ∎
+-}
 
 wk : Tms (Γ ▹ A) Γ
 wk = π₁ id
 
-vz : Tm (Γ ▹ A) A
+vz : Tm (Γ ▹ A) (A [ wk ]T)
 vz = π₂ id
 
-vs : Tm Γ A → Tm (Γ ▹ B) A
+vs : Tm Γ A → Tm (Γ ▹ B) (A [ wk ]T)
 vs t = t [ wk ]t
 
-
 <_> : Tm Γ A → Tms Γ (Γ ▹ A)
-< t > = id , t
-
-_↑ : Tms Γ Δ → Tms (Γ ▹ A) (Δ ▹ A)
-σ ↑ = σ ∘ wk , vz
-
-infixl 20 _$_
-_$_ : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-t $ u = (ƛ⁻¹ t) [ < u > ]t
-
-I : Tm ∙ (A ⇒ A)
-I = ƛ vz
-
-S : Tm ∙ (A ⇒ B ⇒ A)
-S = ƛ (ƛ (vs vz))
-
-K : Tm ∙ ((A ⇒ B ⇒ C) ⇒ (A ⇒ B) ⇒ A ⇒ C)
-K = ƛ (ƛ (ƛ (vs (vs vz) $ vz $ (vs vz $ vz))))
-
-_[_]t¹ : Tm (Γ ▹ A) B → Tm Γ A → Tm Γ B
-t [ u ]t¹ = t [ < u > ]t
-
-β : ƛ t $ u ≡ t [ u ]t¹
-β {u = u} = cong _[ < u > ]t ⇒-β
-
-vz≡ : vz [ σ , u ]t ≡ u
-vz≡ = {!!}
-
-vs≡ : (vs t) [ σ , u ]t ≡ t [ σ ]t
-vs≡ = {!!}
-
-η : {t : Tm Γ (A ⇒ B)}
-  → ƛ (vs t $ vz) ≡ t
-η {t = t} =
-  begin
-    ƛ (vs t $ vz)
-  ≡⟨ {!!} ⟩ {!!}
-
-
--- t ⁺ [ u ]t¹ ≡ t
--- ...
-
-
-
--}
--}
+< t > = id , coe (ap (Tm _) (sym [id]T)) t

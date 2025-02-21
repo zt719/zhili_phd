@@ -32,7 +32,7 @@ module _ (FC : Cont) where
 
   Free₁ : (X → Y) → Free FC X → Free FC Y
   Free₁ f (Var x) = Var (f x)
-  Free₁ f (Con (s , p)) = Con (s , Free₁ f ∘ p)
+  Free₁ f (Con k) = Con (⟦ FC ⟧₁ (Free₁ f) k)
   
   Free-id : Free₁ (id {A = X}) ≡ id
   Free-id i (Var x) = Var x

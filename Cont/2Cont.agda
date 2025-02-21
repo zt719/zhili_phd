@@ -24,7 +24,6 @@ record ⟦_⟧ (cont : Cont₂) (F : Set → Set) (A : Set) : Set where
     p-f : (p : P-F s) → F (⟦ R-F s p ⟧ F A)
     p-a : P-A s → A
 
--- initial algebra for Bush
 H : (Set → Set) → Set → Set
 H F A = A × F (F A)
 

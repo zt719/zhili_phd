@@ -1,6 +1,6 @@
 {-# OPTIONS --guardedness --cubical #-}
 
-module Cont-2 where
+module Cont2 where
 
 open import Function.Base
 open import Cubical.Foundations.Prelude hiding (_◁_)
