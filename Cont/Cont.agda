@@ -1,21 +1,56 @@
-{-# OPTIONS --cubical #-}
-
 module Cont.Cont where
 
 open import Function.Base
-open import Cubical.Foundations.Prelude
+-- open import Cubical.Foundations.Prelude
+
+-- Container
+infix  0 _◃_
+record Cont : Set₁ where
+  constructor _◃_
+  field
+    S : Set
+    P : S → Set
+
+private variable SP TQ WR : Cont
+
+-- Container Hom
+record Cont[_,_] (SP TQ : Cont) : Set where
+  constructor _◃_
+  open Cont SP
+  open Cont TQ renaming (S to T; P to Q)
+  field
+    u : S → T
+    f : (s : S) → Q (u s) → P s
+
+-- Container Extension Functor
+record ⟦_⟧ (SP : Cont) (X : Set) : Set where
+  constructor _,_
+  open Cont SP
+  field
+    s : S
+    p : P s → X
+
+⟦_⟧₁ : (FC : Cont) → {X Y : Set} → (X → Y) → ⟦ FC ⟧ X → ⟦ FC ⟧ Y
+⟦ FC ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
+{-# INLINE ⟦_⟧₁ #-}
+
+⟦_⟧₂ : {SP TQ : Cont} (uf : Cont[ SP , TQ ])
+  → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+⟦ f ◃ g ⟧₂ X (s , p) = f s , (p ∘ g s)
+
+{-
 
 -- Functor & Natural Transformation
 
-record Func : Type₁ where
+record Func : Set₁ where
   field
-    F₀ : Type → Type
+    F₀ : Set → Set
     F₁ : ∀ {X Y} → (X → Y) → F₀ X → F₀ Y
     F-id : ∀ {X} → F₁ {X} id ≡ id
     F-∘ : ∀ {X Y Z} (f : Y → Z) (g : X → Y)
         → F₁ (f ∘ g) ≡ F₁ f ∘ F₁ g
 
-record Nat (F G : Func) : Type₁ where
+record Nat (F G : Func) : Set₁ where
   open Func F
   open Func G renaming (F₀ to G₀; F₁ to G₁)
   field
@@ -28,16 +63,16 @@ postulate
 
 -- Container
 infix  0 _◃_
-record Cont : Type₁ where
+record Cont : Set₁ where
   constructor _◃_
   field
-    S : Type
-    P : S → Type
+    S : Set
+    P : S → Set
 
 private variable SP TQ WR : Cont
 
 -- Container Hom
-record Cont[_,_] (SP TQ : Cont) : Type where
+record Cont[_,_] (SP TQ : Cont) : Set where
   constructor _◃_
   open Cont SP
   open Cont TQ renaming (S to T; P to Q)
@@ -46,20 +81,19 @@ record Cont[_,_] (SP TQ : Cont) : Type where
     f : (s : S) → Q (u s) → P s
 
 -- Container Extension Functor
-record ⟦_⟧ (SP : Cont) (X : Type) : Type where
+record ⟦_⟧ (SP : Cont) (X : Set) : Set where
   constructor _,_
   open Cont SP
   field
     s : S
     p : P s → X
 
-⟦_⟧₁ : (FC : Cont) → {X Y : Type} → (X → Y) → ⟦ FC ⟧ X → ⟦ FC ⟧ Y
--- ⟦ FC ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
-⟦ FC ⟧₁ k (s , p) = s , k ∘ p
--- {-# INLINE ⟦_⟧₁ #-}
+⟦_⟧₁ : (FC : Cont) → {X Y : Set} → (X → Y) → ⟦ FC ⟧ X → ⟦ FC ⟧ Y
+⟦ FC ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
+{-# INLINE ⟦_⟧₁ #-}
 
 ⟦_⟧₂ : {SP TQ : Cont} (uf : Cont[ SP , TQ ])
-  → (X : Type) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+  → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
 ⟦ f ◃ g ⟧₂ X (s , p) = f s , p ∘ g s
 
 C→F : Cont → Func
@@ -106,4 +140,5 @@ _∘c_ : Cont → Cont → Cont
 = Σ[ sf ∈ Σ[ s ∈ S ] (P s → T) ] (Σ[ p ∈ P (fst sf)) ] (Q ((snd sf) p)) → X)
 = ⟦ Σ[ s ∈ S ] (P s → T) ◃ λ sf → Σ[ p ∈ P (fst sf) ] (Q (snd sf) p) ⟧ X
 = ⟦ Σ[ s ∈ S ] (P s → T) ◃ λ (s , f) → Σ[ p ∈ P s ] (Q f p) ⟧ X
+-}
 -}

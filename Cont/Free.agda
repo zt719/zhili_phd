@@ -69,14 +69,6 @@ module _ (FC : Cont) where
     φη⁻ (Var x , y , eq) = x
     φη⁻ (Con c , y , eq) = _
 
-{-
-    φ-iso : X ≅ Pullbxck (Free₁ f) (η Y)
-    φ-iso ._≅_.fun = φη
-    φ-iso ._≅_.inv = φη⁻
-    φ-iso ._≅_.rightInv = {!!}
-    φ-iso ._≅_.leftInv x = refl
--}
-
 data FreeS (FC : Cont) : Set where
   Var : FreeS FC
   Con : ⟦ FC ⟧ (FreeS FC) → FreeS FC

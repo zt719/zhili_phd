@@ -14,43 +14,45 @@ data Ty : Set where
   _⇒_ : Ty → Ty → Ty
 
 data Con : Set where
-  • : Con
-  _▷_ : Con → Ty → Con
+  ∙ : Con
+  _▹_ : Con → Ty → Con
 
-infixl 5 _▷_
+infixl 5 _▹_
 
 dom : Ty → Con
-dom set = •
-dom (A ⇒ B) = dom B ▷ A
+dom set = ∙
+dom (A ⇒ B) = dom B ▹ A
 
 variable A B C : Ty
 variable Γ Δ : Con
 
 data Var : Con → Ty → Set where
-  zero : Var (Γ ▷ A) A
-  suc  : Var Γ A → Var (Γ ▷ B) A
+  zero : Var (Γ ▹ A) A
+  suc  : Var Γ A → Var (Γ ▹ B) A
 
-record HCont-Set (Γ : Con) : Set
+data HCont-NF : Con → Ty → Set
 
-data HCont-NE (Γ : Con) : Con → Set
+record HCon-NE (Γ : Con) : Set
 
-data HCont-NF : Con → Ty → Set where
-  lam : HCont-NF (Γ ▷ A) B → HCont-NF Γ (A ⇒ B)
-  ne  : HCont-Set Γ → HCont-NF Γ set
+data HCont-SP (Γ : Con) : Con → Set
 
-record HCont-Set Γ  where
+data HCont-NF where
+  lam : HCont-NF (Γ ▹ A) B → HCont-NF Γ (A ⇒ B)
+  ne  : HCon-NE Γ → HCont-NF Γ set
+
+record HCon-NE Γ where
   inductive
   field
     S : Var Γ A → Set
     P : {x : Var Γ A}(s : S x) → Set
-    R : {x : Var Γ A}{s : S x}(p : P s) → HCont-NE Γ (dom A)
+    R : {x : Var Γ A}{s : S x}(p : P s) → HCont-SP Γ (dom A)
 
-data HCont-NE Γ where
-  ε : HCont-NE Γ • 
-  _,_ : HCont-NE Γ Δ → HCont-NF Γ A → HCont-NE Γ (Δ ▷ A)
+data HCont-SP Γ where
+  ε : HCont-SP Γ ∙ 
+  _,_ : HCont-SP Γ Δ → HCont-NF Γ A → HCont-SP Γ (Δ ▹ A)
 
 HCont : Ty → Set
-HCont A = HCont-NF • A
+HCont A = HCont-NF ∙ A
 
 -- Semantics
 
@@ -58,43 +60,9 @@ HCont A = HCont-NF • A
 ⟦ set ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
--- (a : ⟦ A ⟧T) → ⟦ A ⟧F a
-{-
-S : Set
-P : S → Set
-
-⟦ S ◁ P ⟧ X = Σ[ s : S ] (P s → X)
--- is a functor
-
-Cont (S ◁ P) (T ◁ Q) = Σ[ f : S → T ] (s : S) → Q (f s) → P s
--- is natural transformation
--- every natural transformation bewteen containers gives rise to container morphism
-   Cont → Func is full and faithful (f & f) 
-Q1 : How to define morphisms between higher containers?
-Q2 : IS this also f&f ?
-
-What do we want to do.
-
-1. That every HCont gives rise to a heredetary higher functor
-   HCont A -> HFunc A
-2. Define HCont morphism and show that they give rise to the corresponding nat-tfns.
-2-1.   Is this full & faithful
-3.* Show that HCont is a model of STLC. Related to hereditary normalisation.
-  https://dl.acm.org/doi/pdf/10.1145/1863597.1863601
-4. Construct inductive and coinductive types.
-+...
-
-
-
-
-
-
--}
-
-
 ⟦_⟧C : Con → Set
-⟦ • ⟧C = ⊤
-⟦ Γ ▷ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
+⟦ ∙ ⟧C = ⊤
+⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
 appT : ⟦ A ⟧T → ⟦ dom A ⟧C → Set
 appT {A = set} X tt = X
@@ -104,15 +72,16 @@ appT {A = A ⇒ B} f (β , a) = appT {A = B} (f a) β
 ⟦ zero ⟧v (_ , a) = a
 ⟦ suc x ⟧v (γ , _) = ⟦ x ⟧v γ
 
---record ⟦_⟧set (DD : HCont-Set Γ)(γ : ⟦ Γ ⟧C) : Set
-⟦_⟧set : (DD : HCont-Set Γ)(γ : ⟦ Γ ⟧C) → Set
-⟦_⟧ne : HCont-NE Γ Δ → ⟦ Γ ⟧C → ⟦ Δ ⟧C
+
+--record ⟦_⟧set (DD : HCon-NE Γ)(γ : ⟦ Γ ⟧C) : Set
+⟦_⟧set : (DD : HCon-NE Γ)(γ : ⟦ Γ ⟧C) → Set
+⟦_⟧ne : HCont-SP Γ Δ → ⟦ Γ ⟧C → ⟦ Δ ⟧C
 
 ⟦_⟧nf : HCont-NF Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 ⟦ lam CC ⟧nf γ a = ⟦ CC ⟧nf (γ , a)
 ⟦ ne DD ⟧nf γ = ⟦ DD ⟧set γ
 
-app : HCont-NF Γ (A ⇒ B) → HCont-NF (Γ ▷ A) B
+app : HCont-NF Γ (A ⇒ B) → HCont-NF (Γ ▹ A) B
 app (lam CC) = CC
 
 ⟦_⟧set {Γ} record { S = S ; P = P ; R = R } γ =
@@ -125,7 +94,7 @@ app (lam CC) = CC
 {-
 record ⟦_⟧set {Γ} CC γ where
   inductive
-  open HCont-Set CC
+  open HCon-NE CC
   field
     s : (x : Var Γ A) → S x
     r : {x : Var Γ A}{s : S x}(p : P s) → appT (⟦ x ⟧v γ) (⟦ R p ⟧ne γ) 
@@ -199,8 +168,8 @@ A ×-Cat B =
     open Cat B renaming (obj to objB ; hom to homB ; id to idB ; _∘_ to _∘B_)
 
 ⟦_⟧Cat-C : Con → Cat
-⟦ • ⟧Cat-C = ⊤-Cat
-⟦ Γ ▷ A ⟧Cat-C = ⟦ Γ ⟧Cat-C ×-Cat ⟦ A ⟧Cat
+⟦ ∙ ⟧Cat-C = ⊤-Cat
+⟦ Γ ▹ A ⟧Cat-C = ⟦ Γ ⟧Cat-C ×-Cat ⟦ A ⟧Cat
 
 ⟦_⟧cat-nf : HCont-NF Γ A → FuncSet ⟦ Γ ⟧Cat-C ⟦ A ⟧Cat
 ⟦ CC ⟧cat-nf = {!!}
@@ -287,10 +256,13 @@ H F A = A × F (F A)
 
 TT : Ty
 TT =  ((set ⇒ set)  ⇒ (set ⇒ set))
+
+Γ₀ : Con
+Γ₀ = ∙ ▹ (set ⇒ set) ▹ set
+
 HC : HCont TT
 HC = lam (lam (ne (record { S = S ; P = P ; R = R })))
-  where Γ₀ : Con
-        Γ₀ = • ▷ (set ⇒ set) ▷ set
+  where 
         S : {A : Ty} → Var Γ₀ A → Set
         S zero = ⊤
         S (suc zero) = ⊤
@@ -303,11 +275,11 @@ HC = lam (lam (ne (record { S = S ; P = P ; R = R })))
         R-FA-P :  {A : Ty} {x : Var Γ₀ A} → R-FA-S x → Set 
         R-FA-P {x = zero} tt = ⊤
         R-FA-P {x = suc zero} tt = ⊥
-        R-FA-R :  {A : Ty} {x : Var Γ₀ A} {s : R-FA-S x} → R-FA-P s → HCont-NE Γ₀ (dom A)
+        R-FA-R :  {A : Ty} {x : Var Γ₀ A} {s : R-FA-S x} → R-FA-P s → HCont-SP Γ₀ (dom A)
         R-FA-R {x = zero} tt = ε
         R-FA-R {x = suc zero} ()
         R-FA-R {x = suc (suc ())} s
-        R-FA : HCont-Set Γ₀
+        R-FA : HCon-NE Γ₀
         R-FA = record { S = R-FA-S ; P = R-FA-P ; R = R-FA-R }            
         R-FFA-S : {A : Ty} → Var Γ₀ A → Set
         R-FFA-S zero = ⊤
@@ -315,13 +287,13 @@ HC = lam (lam (ne (record { S = S ; P = P ; R = R })))
         R-FFA-P :  {A : Ty} {x : Var Γ₀ A} → R-FFA-S x → Set 
         R-FFA-P {x = zero} tt = ⊥
         R-FFA-P {x = suc zero} tt = ⊤
-        R-FFA-R :  {A : Ty} {x : Var Γ₀ A} {s : R-FFA-S x} → R-FFA-P s → HCont-NE Γ₀ (dom A)
+        R-FFA-R :  {A : Ty} {x : Var Γ₀ A} {s : R-FFA-S x} → R-FFA-P s → HCont-SP Γ₀ (dom A)
         R-FFA-R {x = zero} ()
         R-FFA-R {x = suc zero} p = ε , (ne R-FA)
         R-FFA-R {x = suc (suc ())} s
-        R-FFA : HCont-Set Γ₀
+        R-FFA : HCon-NE Γ₀
         R-FFA = record { S = R-FFA-S ; P = R-FFA-P ; R = R-FFA-R }  
-        R : {A : Ty} {x : Var Γ₀ A} {s : S x} → P s → HCont-NE Γ₀ (dom A)
+        R : {A : Ty} {x : Var Γ₀ A} {s : S x} → P s → HCont-SP Γ₀ (dom A)
         R {x = zero} p = ε
         R {x = suc zero} p = ε , (ne R-FFA) 
 
@@ -335,12 +307,12 @@ record Cont : Set where
 
 cont→hcont : Cont → HCont (set ⇒ set)
 cont→hcont (S ◁ P) = lam (ne (record { S = T ; P = Q ; R = λ {A} {x} {s} p → R {s = s} p }))
-  where T : Var (• ▷ set) A → Set
+  where T : Var (∙ ▹ set) A → Set
         T zero = S
-        Q : {x : Var (• ▷ set) A} → T x → Set
+        Q : {x : Var (∙ ▹ set) A} → T x → Set
         Q {x = zero} s = P s
-        R : {A : Ty}{x : Var (• ▷ set) A} {s : T x} → Q {x = x} s → HCont-NE (• ▷ set) (dom A)
-        R {x = zero} {s = s} q = ε {Γ = (• ▷ set)}
+        R : {A : Ty}{x : Var (∙ ▹ set) A} {s : T x} → Q {x = x} s → HCont-SP (∙ ▹ set) (dom A)
+        R {x = zero} {s = s} q = ε {Γ = (∙ ▹ set)}
         
 hcont→cont : HCont (set ⇒ set) → Cont
 hcont→cont (lam (ne record { S = S ; P = P ; R = R })) = (S zero) ◁ P {x = zero}
@@ -349,7 +321,7 @@ hcont→cont (lam (ne record { S = S ; P = P ; R = R })) = (S zero) ◁ P {x = z
 
 {-
 
-IC-NF : HCont-NF (• ▷ A) A
+IC-NF : HCont-NF (∙ ▹ A) A
 IC-NF {set} = {!!}
 IC-NF {A ⇒ B} = {!!}
 
