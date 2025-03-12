@@ -122,29 +122,59 @@ Cont→HCont (S ◃ P) = lam (ne (record { S = S ; P = λ{ s zero → P s } ; R 
 ⟦ ∙ ⟧C = ⊤
 ⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
-
 ⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 ⟦ zero ⟧v (γ , a) = a
 ⟦ suc x ⟧v (γ , a) = ⟦ x ⟧v γ
 
 ⟦_⟧nf : HCont-NF Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 ⟦_⟧ne : HCont-NE Γ → ⟦ Γ ⟧C → Set
-⟦_⟧sp : HCont-SP Γ A → ⟦ Γ ⟧C → Set
-
-appSp : HCont-SP Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T → Set
-appSp ε γ a = a
-appSp (n , ns) γ f = appSp ns γ (f (⟦ n ⟧nf γ))
+⟦_⟧sp : HCont-SP Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T → Set
 
 ⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
 ⟦ ne x ⟧nf γ = ⟦ x ⟧ne γ
 
 ⟦_⟧ne {Γ} record { S = S ; P = P ; R = R } γ =
-  (s : S) {A : Ty} (x : Var Γ A) (p : P s x) → {!!}
+  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))
 
-⟦_⟧sp = {!!}
+⟦ ε ⟧sp γ a = a
+⟦ n , ns ⟧sp γ f = ⟦ ns ⟧sp γ (f (⟦ n ⟧nf γ))
 
 ⟦_⟧hcont : HCont A → ⟦ A ⟧T
 ⟦ x ⟧hcont = ⟦ x ⟧nf tt
 
-HH : (Set → Set) → Set → Set
-HH = ⟦ BCont ⟧hcont
+B-HCont : (Set → Set) → Set → Set
+B-HCont = ⟦ BCont ⟧hcont
+
+{-
+= ⟦ lam (lam (ne (record { S = S ; P = P ; R = R }))) ⟧hcont
+= ⟦ lam (lam (ne (record { S = S ; P = P ; R = R }))) ⟧nf tt
+= λ F → ⟦ lam (ne (record { S = S ; P = P ; R = R })) ⟧nf (tt , F)
+= λ F X → ⟦ ne (record { S = S ; P = P ; R = R }) ⟧nf (tt , F , X)
+= λ F X → ⟦ record { S = S ; P = P ; R = R } ⟧ne (tt , F , X)
+= λ F X → ⟦ record { S = S ; P = P ; R = R } ⟧ne (tt , F , A)
+= λ F X → Σ[ s ∈ S ] ((x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))   # γ = tt , F , X
+
+  Σ[ s ∈ S ] ((x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))
+= ((x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))                # S = ⊤
+= ⟦ R tt zero tt ⟧sp γ (⟦ zero ⟧v γ) × ⟦ R tt one tt ⟧sp γ (⟦ one ⟧v γ))  # P tt zero = ⊤ , P tt one = ⊤
+= ⟦ ε ⟧sp γ (⟦ zero ⟧v γ) × ⟦ ne FFA , ε ⟧sp γ (⟦ one ⟧v γ)               # R ...
+= ⟦ zero ⟧v γ × ⟦ ε ⟧sp γ (⟦ one ⟧v γ (⟦ ne NE-FA ⟧nf γ))
+= X × ⟦ one ⟧v γ (⟦ ne NE-FA ⟧nf γ)
+= X × F (⟦ ne NE-FA ⟧nf γ)
+= X × F (⟦ NE-FA ⟧ne γ)
+
+  ⟦ NE-FA ⟧ne γ
+= ⟦ record { S = S ; P = P ; R = R } ⟧ne γ
+= Σ[ s ∈ S ] ((x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))   # by definition of S , P , R
+= ⟦ ne NE-A , ε ⟧sp γ (⟦ one ⟧v γ)
+= ⟦ ε ⟧sp γ (⟦ one ⟧v γ (⟦ ne NE-A ⟧nf γ))
+= ⟦ one ⟧v γ (⟦ ne NE-A ⟧nf γ)
+= F (⟦ ne NE-A ⟧nf γ)
+
+  ⟦ ne NE-A ⟧nf γ
+= ⟦ record { S = S ; P = P ; R = R } ⟧ne γ
+= Σ[ s ∈ S ] ((x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))   # by definition of S , P , R
+= ⟦ ε ⟧γ (⟦ zero ⟧v γ)
+= ⟦ zero ⟧v γ
+= A
+-}

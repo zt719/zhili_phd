@@ -1,2 +1,3 @@
-# ignore all interface files
 *.agdai
+.DS_Store
+/Latex
