@@ -96,13 +96,14 @@ appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
 appSp ε n = n , ε
 appSp (t , ts) n = t , appSp ts n
 
-η : Ne Γ A → Nf Γ A
-η {A = ∘} e = ne e
-η {A = A ⇒ B} (v , ns) =
-  lam (η (vs v , appSp (wkSp vz ns) (η (vz , ε))))
+nvar : Var Γ A → Nf Γ A
+ne2nf : Ne Γ A → Nf Γ A
 
-nVar : Var Γ A → Nf Γ A
-nVar x = η (x , ε)
+ne2nf {A = ∘} e = ne e
+ne2nf {A = A ⇒ B} (v , ns) =
+  lam (ne2nf (vs v , appSp (wkSp vz ns) (nvar vz)))
+
+nvar x = ne2nf (x , ε)
 
 -----
 
@@ -110,7 +111,7 @@ nVar x = η (x , ε)
 _[_:=_] : Nf Γ B → (x : Var Γ A) → Nf (Γ - x) A → Nf (Γ - x) B
 _<_:=_> : Sp Γ B C → (x : Var Γ A) → Nf (Γ - x) A → Sp (Γ - x) B C
 _◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
-nApp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
+napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
 
 (lam t) [ x := u ] = lam (t [ vs x := wkNf vz u ])
 (ne (y , ts)) [ x := u ] with eq x y
@@ -121,14 +122,14 @@ nApp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
 
 t ◇ ε = t
-t ◇ (u , us) = nApp t u ◇ us
+t ◇ (u , us) = napp t u ◇ us
 
-nApp (lam t) u = t [ vz := u ]
+napp (lam t) u = t [ vz := u ]
 
 nf : Tm Γ A → Nf Γ A
-nf (var x) = nVar x
+nf (var x) = nvar x
 nf (lam t) = lam (nf t)
-nf (app t u) = nApp (nf t) (nf u)
+nf (app t u) = napp (nf t) (nf u)
 
 -- λf.λz.f ((λx.f x) z)
 ex0 : Tm ∙ ((∘ ⇒ ∘) ⇒ (∘ ⇒ ∘))

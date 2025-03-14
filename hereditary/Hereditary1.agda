@@ -78,18 +78,18 @@ data Nf : Con → Ty → Set
 
 data Ne : Con → Set
 
-data Sp : Con → Ty → Set
+data Sp : Con → Ty → Ty → Set
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
   ne  : Ne Γ → Nf Γ ∘
 
 data Ne where
-  _,_ : Var Γ A → Sp Γ A → Ne Γ
+  _,_ : Var Γ A → Sp Γ A ∘ → Ne Γ
 
 data Sp where
-  ε   : Sp Γ ∘
-  _,_ : Nf Γ A → Sp Γ B → Sp Γ (A ⇒ B)
+  ε   : Sp Γ A A
+  _,_ : Nf Γ A → Sp Γ B C → Sp Γ (A ⇒ B) C
   
 -- λf.λz.f (f z)
 exnf : Nf ∙ ((∘ ⇒ ∘) ⇒ (∘ ⇒ ∘))
@@ -101,7 +101,7 @@ embNf : Nf Γ A → Tm Γ A
 
 embNe : Ne Γ → Tm Γ ∘
 
-embSp : Tm Γ A → Sp Γ A → Tm Γ ∘
+embSp : Tm Γ A → Sp Γ A B → Tm Γ B
 
 embNf (lam n) = lam (embNf n)
 embNf (ne e) = embNe e
@@ -113,7 +113,7 @@ embSp t (n , ns) = embSp (app t (embNf n)) ns
 
 wkNf : (x : Var Γ A) → Nf (Γ - x) B → Nf Γ B
 wkNe : (x : Var Γ A) → Ne (Γ - x) → Ne Γ
-wkSp : (x : Var Γ A) → Sp (Γ - x) B → Sp Γ B
+wkSp : (x : Var Γ A) → Sp (Γ - x) B C → Sp Γ B C
 
 wkNf x (lam n) = lam (wkNf (vs x) n)
 wkNf x (ne e) = ne (wkNe x e)
@@ -127,40 +127,53 @@ appTy : Ty → Ty → Ty
 appTy ∘ A = A ⇒ ∘
 appTy (A ⇒ B) C = A ⇒ appTy B C
 
-appSp : Sp Γ A → Nf Γ B → Sp Γ (appTy A B)
+appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
 appSp ε u = u , ε
 appSp (t , ts) u = t , appSp ts u
 
 -- η-expansion
 
+nvar : Var Γ A → Nf Γ A
+ne2nf : Ne Γ → Nf Γ ∘
+
+nvar {Γ} {A} x = {!!}
+
+
+ne2nf x = {!!}
+
 -- Normalization
 
-nApp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
+{-
+napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
 
 _[_:=_] : Nf Γ A → (x : Var Γ B) → Nf (Γ - x) B → Nf (Γ - x) A
 
-_<_:=_> : Sp Γ A → (x : Var Γ B) → Nf (Γ - x) B → Sp (Γ - x) A
+_<_:=_> : Sp Γ A B → (x : Var Γ B) → Nf (Γ - x) B → Sp (Γ - x) A B
 
-_◇_ : Nf Γ A → Sp Γ A → Ne Γ
+_◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 
-nApp (lam t) u = t [ vz := u ]
+napp (lam t) u = t [ vz := u ]
 
 (lam t) [ x := u ] = lam (t [ vs x := wkNf vz u ])
 (ne (y , ts)) [ x := u ] with eq x y
-... | same = ne (u ◇ (ts < x := u >))
+... | same = u ◇ (ts < x := u >)
 ... | diff .x y' = ne (y' , (ts < x := u >))
 
 ε < x := u > = ε
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
 
 (ne x) ◇ ε = x
-(lam t) ◇ (u , us) = nApp (lam t) u ◇ us
+(lam t) ◇ (u , us) = napp (lam t) u ◇ us
 
 nTm : Tm ∙ A → Nf ∙ A
 nTm (lam x) = lam {!!}
-nTm (app t u) = nApp (nTm t) (nTm u)
+nTm (app t u) = napp (nTm t) (nTm u)
 
 -- λx.x
 ex1 : Nf ∙ ((∘ ⇒ ∘) ⇒ (∘ ⇒ ∘))
 ex1 = lam {!ne!}
 
+zero-nf : Nf (Γ ▹ A) A
+zero-nf {Γ} {∘} = ne (vz , ε)
+zero-nf {Γ} {A ⇒ B} = lam {!!}
+-}
