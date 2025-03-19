@@ -108,6 +108,7 @@ nvar x = ne2nf (x , ε)
 -----
 
 
+
 _[_:=_] : Nf Γ B → (x : Var Γ A) → Nf (Γ - x) A → Nf (Γ - x) B
 _<_:=_> : Sp Γ B C → (x : Var Γ A) → Nf (Γ - x) A → Sp (Γ - x) B C
 _◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
