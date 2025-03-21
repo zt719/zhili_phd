@@ -29,19 +29,19 @@ _-_ : (Γ : Con) → Var Γ A → Con
 (Γ ▹ A) - vz = Γ
 (Γ ▹ A) - vs x = (Γ - x) ▹ A
 
-wkVar : (x : Var Γ A) → Var (Γ - x) B → Var Γ B
-wkVar vz y = vs y
-wkVar (vs x) vz = vz
-wkVar (vs x) (vs y) = vs (wkVar x y)
+wkv : (x : Var Γ A) → Var (Γ - x) B → Var Γ B
+wkv vz y = vs y
+wkv (vs x) vz = vz
+wkv (vs x) (vs y) = vs (wkv x y)
 
 wkTm : (x : Var Γ A) → Tm (Γ - x) B → Tm Γ B
-wkTm x (var v) = var (wkVar x v)
+wkTm x (var v) = var (wkv x v)
 wkTm x (lam t) = lam (wkTm (vs x) t)
 wkTm x (app t u) = app (wkTm x t) (wkTm x u)
 
 data EqVar : Var Γ A → Var Γ B → Set where
   same : EqVar x x
-  diff : (x : Var Γ A) (y : Var (Γ - x) B) → EqVar x (wkVar x y)
+  diff : (x : Var Γ A) (y : Var (Γ - x) B) → EqVar x (wkv x y)
 
 eq : (x : Var Γ A) (y : Var Γ B) → EqVar x y
 eq vz vz = same
@@ -78,23 +78,24 @@ data Nf : Con → Ty → Set
 
 data Ne : Con → Set
 
-data Sp : Con → Ty → Ty → Set
+data Sp : Con → Ty → Set
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
   ne  : Ne Γ → Nf Γ ∘
 
 data Ne where
-  _,_ : Var Γ A → Sp Γ A ∘ → Ne Γ
+  _,_ : Var Γ A → Sp Γ A → Ne Γ
 
 data Sp where
-  ε   : Sp Γ A A
-  _,_ : Nf Γ A → Sp Γ B C → Sp Γ (A ⇒ B) C
+  ε   : Sp Γ ∘
+  _,_ : Nf Γ A → Sp Γ B → Sp Γ (A ⇒ B)
   
 -- λf.λz.f (f z)
 exnf : Nf ∙ ((∘ ⇒ ∘) ⇒ (∘ ⇒ ∘))
 exnf = lam (lam (ne (vs vz , (ne (vs vz , (ne (vz , ε) , ε)) , ε))))
 
+{-
 -- Embedding
 
 embNf : Nf Γ A → Tm Γ A
@@ -110,24 +111,25 @@ embNe (v , sp) = embSp (var v) sp
 
 embSp t ε = t
 embSp t (n , ns) = embSp (app t (embNf n)) ns
+-}
 
 wkNf : (x : Var Γ A) → Nf (Γ - x) B → Nf Γ B
 wkNe : (x : Var Γ A) → Ne (Γ - x) → Ne Γ
-wkSp : (x : Var Γ A) → Sp (Γ - x) B C → Sp Γ B C
+wkSp : (x : Var Γ A) → Sp (Γ - x) B → Sp Γ B
 
 wkNf x (lam n) = lam (wkNf (vs x) n)
 wkNf x (ne e) = ne (wkNe x e)
 
-wkNe x (v , sp) = wkVar x v , wkSp x sp
+wkNe x (v , sp) = wkv x v , wkSp x sp
 
 wkSp x ε = ε
 wkSp x (n , ns) = wkNf x n , wkSp x ns
 
-appTy : Ty → Ty → Ty
-appTy ∘ A = A ⇒ ∘
-appTy (A ⇒ B) C = A ⇒ appTy B C
+spTy : Ty → Ty → Ty
+spTy ∘ A = A ⇒ ∘
+spTy (A ⇒ B) C = A ⇒ spTy B C
 
-appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
+appSp : Sp Γ A → Nf Γ B → Sp Γ (spTy A B)
 appSp ε u = u , ε
 appSp (t , ts) u = t , appSp ts u
 

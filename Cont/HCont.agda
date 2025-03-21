@@ -1,4 +1,4 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --allow-unsolved-metas #-}
 
 module Cont.HCont where
 
@@ -6,7 +6,6 @@ open import Data.Product
 open import Data.Sum
 open import Data.Unit
 open import Data.Empty
-open import Relation.Binary.PropositionalEquality
 
 {- Syntax -}
 
@@ -15,20 +14,20 @@ data Ty : Set where
   ∘ : Ty
   _⇒_ : Ty → Ty → Ty
 
-variable A B C : Ty
+private variable A B C : Ty
 
 infixl 5 _▹_
 data Con : Set where
   ∙   : Con
   _▹_ : Con → Ty → Con
 
-variable Γ Δ : Con
+private variable Γ Δ : Con
 
 data Var : Con → Ty → Set where
   vz : Var (Γ ▹ A) A
   vs : Var Γ A → Var (Γ ▹ B) A
 
-variable x y : Var Γ A
+private variable x y : Var Γ A
 
 data Nf : Con → Ty → Set
 
@@ -53,58 +52,6 @@ data Sp where
 
 HCont : Ty → Set
 HCont A = Nf ∙ A
-
-{- Example -}
-
-H : (Set → Set) → (Set → Set)
-H F X = X × F (F X)
-
-H-Nf : Nf ∙ ((∘ ⇒ ∘) ⇒ ∘ ⇒ ∘)
-H-Nf = lam (lam (ne (record { S = S ; P = P ; R = R })))
-  where
-  Γ₀ : Con
-  Γ₀ = ∙ ▹ ∘ ⇒ ∘ ▹ ∘
-
-  X-S : Set
-  X-S = ⊤
-
-  X-P : X-S → Var Γ₀ A → Set
-  X-P tt vz = ⊤
-  X-P tt (vs vz) = ⊥
-
-  X-R : (s : X-S) (x : Var Γ₀ A) → X-P s x → Sp Γ₀ A ∘
-  X-R tt vz tt = ε
-  X-R tt (vs vz) ()
-
-  X-Nf : Nf Γ₀ ∘
-  X-Nf = ne (record { S = X-S ; P = X-P ; R = X-R })
-  ---
-  FX-S : Set
-  FX-S = ⊤
-
-  FX-P : FX-S → Var Γ₀ A → Set
-  FX-P tt vz = ⊥
-  FX-P tt (vs vz) = ⊤
-
-  FX-R : (s : FX-S) (x : Var Γ₀ A) → FX-P s x → Sp Γ₀ A ∘
-  FX-R tt (vs vz) tt = X-Nf , ε
-    
-  FX-Nf : Nf Γ₀ ∘
-  FX-Nf = ne (record { S = FX-S ; P = FX-P ; R = FX-R })
-  ---
-  S : Set
-  S = ⊤
-  
-  P : S → Var Γ₀ A → Set
-  P tt vz = ⊤
-  P tt (vs vz) = ⊤
-
-  R : (s : S) (x : Var Γ₀ A) (p : P s x) → Sp Γ₀ A ∘
-  R tt vz tt = ε
-  R tt (vs vz) p = FX-Nf , ε
-
-H-HCont : HCont ((∘ ⇒ ∘) ⇒ ∘ ⇒ ∘)
-H-HCont = H-Nf
 
 {- Semantics -}
 
@@ -135,8 +82,6 @@ H-HCont = H-Nf
 
 ⟦_⟧hcont : HCont A → ⟦ A ⟧T
 ⟦ x ⟧hcont = ⟦ x ⟧nf tt
-
-
 
 {- Weakening -}
 
@@ -191,9 +136,6 @@ wkSp x (n , ns) = wkNf x n , wkSp x ns
 
 {- Auxiliary functions -}
 
-app : Nf Γ (A ⇒ B) → Nf (Γ ▹ A) B
-app (lam x) = x
-
 appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
 appSp ε u = u , ε
 appSp (n , ns) u = n , appSp ns u
@@ -224,75 +166,26 @@ ne2nf {Γ} {A ⇒ C} record { S = S ; P = P ; R = R } =
   lam (ne2nf (record { S = S ; P = P' ; R = R' }))
   where
   P' : S → Var (Γ ▹ A) B → Set
-  P' s x = {!!}
+  P' s vz = ⊥
+  P' s (vs x) = P s x
 
   R' : (s : S) (x : Var (Γ ▹ A) B) → P' s x → Sp (Γ ▹ A) B C
-  R' s x p = appSp (wkSp vz (R s {!!} p)) (nvar vz)
+  R' s vz ()
+  R' s (vs x) p = appSp (wkSp vz (R s x p)) (nvar vz)
 
-{- Another example -}
+{- Normalization -}
 
-WOW : ((Set → Set) → Set → Set) → (Set → Set) → Set → Set
-WOW H F X = H F X
+_[_:=_] : Nf Γ B → (x : Var Γ A) → Nf (Γ - x) A → Nf (Γ - x) B
+_<_:=_> : Sp Γ A B → (x : Var Γ A) → Nf (Γ - x) A → Sp (Γ - x) A B
+_◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 
-WOW' : ((Set → Set) → Set → Set) → (Set → Set) → Set → Set
-WOW' H F X = H (λ Y → F Y) X
+_[_:=_] = {!!}
+_<_:=_> = {!!}
+_◇_ = {!!}
 
-WOW-Nf : Nf ∙ (((∘ ⇒ ∘) ⇒ ∘ ⇒ ∘) ⇒ ((∘ ⇒ ∘) ⇒ ∘ ⇒ ∘))
-WOW-Nf = lam (lam (lam (ne (record { S = S ; P = P ; R = R }))))
-  where
-  Γ₀ : Con
-  Γ₀ = ∙ ▹ (∘ ⇒ ∘) ⇒ ∘ ⇒ ∘ ▹ ∘ ⇒ ∘ ▹ ∘
+infixl 20 _$_
+_$_ : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
+lam t $ u = t [ vz := u ]
 
-  F-Nf : Nf Γ₀ (∘ ⇒ ∘)
-  F-Nf = lam (ne (record { S = S ; P = P ; R = R }))
-    where
-    Y-Nf : Nf (Γ₀ ▹ ∘) ∘
-    Y-Nf = ne (record { S = S ; P = P ; R = R })
-      where
-      S : Set
-      S = ⊤
-
-      P : S → Var (Γ₀ ▹ ∘) A → Set
-      P tt vz = ⊤
-      P tt (vs _) = ⊥
-
-      R : (s : S) (x : Var (Γ₀ ▹ ∘) A) → P s x → Sp (Γ₀ ▹ ∘) A ∘
-      R tt vz tt = ε
-    
-    S : Set
-    S = ⊤
-
-    P : S → Var (Γ₀ ▹ ∘) A → Set
-    P tt vz = ⊥
-    P tt (vs vz) = ⊥
-    P tt (vs (vs vz)) = ⊤
-    P tt (vs (vs (vs vz))) = ⊥
-
-    R : (s : S) (x : Var (Γ₀ ▹ ∘) A) → P s x → Sp (Γ₀ ▹ ∘) A ∘
-    R tt (vs (vs vz)) tt = Y-Nf , ε
-    R tt (vs (vs (vs vz))) ()
-
-  X-Nf : Nf Γ₀ ∘
-  X-Nf = ne (record { S = S ; P = P ; R = R })
-    where
-    S : Set
-    S = ⊤
-
-    P : S → Var Γ₀ A → Set
-    P tt vz = ⊤
-    P tt (vs x) = ⊥
-
-    R : (s : S) (x : Var Γ₀ A) → P s x → Sp Γ₀ A ∘
-    R tt vz tt = ε
-  
-  S : Set
-  S = ⊤
-
-  P : S → Var Γ₀ A → Set
-  P tt vz = ⊥
-  P tt (vs vz) = ⊥
-  P tt (vs (vs vz)) = ⊤
-
-  R : (s : S) (x : Var Γ₀ A) → P s x → Sp Γ₀ A ∘
-  R tt (vs (vs vz)) tt = F-Nf , X-Nf , ε
+{- Degree ?? -}
 
