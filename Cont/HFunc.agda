@@ -6,11 +6,11 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.Sum
 
 data Ty : Set where
-  set : Ty
+  * : Ty
   _⇒_ : Ty → Ty → Ty
 
 ⟦_⟧T : Ty → Set
-⟦ set ⟧T = Set
+⟦ * ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
 record Cat (Obj : Set) : Set where
@@ -54,11 +54,11 @@ postulate
 ⟦_⟧F : (A : Ty) → ⟦ A ⟧T → Set
 ⟦_⟧C : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧F)
 
-⟦ set ⟧F X = ⊤
+⟦ * ⟧F X = ⊤
 ⟦ A ⇒ B ⟧F H = Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧F F → ⟦ B ⟧F (H F)) ]
                Func ⟦ A ⟧C ⟦ B ⟧C (λ (F , FF) → H F , HH F FF)
 
-⟦ set ⟧C = record
+⟦ * ⟧C = record
   { Hom = λ (X , _) (Y , _) → X → Y
   ; id = λ x → x
   ; _∘_ = λ f g x → f (g x)
@@ -82,39 +82,39 @@ postulate
   where
     open Cat ⟦ B ⟧C
 
-N : ⟦ set ⇒ set ⟧T
+N : ⟦ * ⇒ * ⟧T
 N X = ⊤ ⊎ X
 
-FuncN : ⟦ set ⇒ set ⟧F N
+FuncN : ⟦ * ⇒ * ⟧F N
 FuncN = _ , record
   { fmap = λ{ f (inl tt) → inl tt ; f (inr x) → inr (f x) }
   ; fmapid = λ{ i (inl tt) → inl tt ; i (inr x) → inr x }
   ; fmap∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr x) → inr (f (g x)) }
   }
 
-B : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧T
+B : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T
 B F X = X × F (F X)
 
-FuncB : ⟦ (set ⇒ set) ⇒ (set ⇒ set) ⟧F B
+FuncB : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧F B
 FuncB = BB , BBB
   where
   open Func
   
-  BB : (F : Set → Set) → ⟦ set ⇒ set ⟧F F → ⟦ set ⇒ set ⟧F (B F)
+  BB : (F : Set → Set) → ⟦ * ⇒ * ⟧F F → ⟦ * ⇒ * ⟧F (B F)
   BB F (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ }) = _ , record
     { fmap = λ f (x , ffx) → f x , fmap (fmap f) ffx
     ; fmapid = λ i (x , ffx) → x , (cong fmap fmapid ∙ fmapid) i ffx
     ; fmap∘ = λ f g i (x , ffx) → f (g x) , (cong fmap (fmap∘ f g) ∙ fmap∘ (fmap f) (fmap g)) i ffx
     }
 
-  BBB : Func ⟦ set ⇒ set ⟧C ⟦ set ⇒ set ⟧C _
+  BBB : Func ⟦ * ⇒ * ⟧C ⟦ * ⇒ * ⟧C _
   BBB .fmap {F , _ , FF} {G , _ , GG} record { η = η ; nat = nat }
     = record
     { η = λ (X , _) (x , ffx) → x , η (G X , tt) (fmap FF (η (X , tt)) ffx)
     ; nat = λ f i (x , ffx) → f x , aux f i ffx
     }
     where
-      open Cat ⟦ set ⟧C
+      open Cat ⟦ * ⟧C
       aux : {X Y : Set} (f : X → Y)
         → fmap GG (fmap GG f) ∘ η (G X , tt) ∘ fmap FF (η (X , tt))
         ≡ η (G Y , tt) ∘ fmap FF (η (Y , tt)) ∘ fmap FF (fmap FF f)
@@ -141,7 +141,7 @@ FuncB = BB , BBB
     record { η = η₂ ; nat = nat₂ }
     = Nat≡ (λ i (X , _) (x , ffx) → x , aux i ffx)
     where
-      open Cat ⟦ set ⟧C
+      open Cat ⟦ * ⟧C
       aux : {X : Set}
         → η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ fmap FF(η₁ (X , tt) ∘ η₂ (X , tt))
         ≡ η₁ (H X , tt) ∘ fmap GG (η₁ (X , tt)) ∘ η₂ (G X , tt) ∘ fmap FF (η₂ (X , tt))

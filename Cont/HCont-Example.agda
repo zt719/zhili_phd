@@ -36,8 +36,8 @@ H-HCont = lam (lam (ne (record { S = S ; P = P ; R = R })))
     R tt vz tt = ε
     R tt (vs vz) ()
     
-  F-Nf : Nf Γ₀ ∘
-  F-Nf = ne (record { S = S ; P = P ; R = R })
+  FX-Nf : Nf Γ₀ ∘
+  FX-Nf = ne (record { S = S ; P = P ; R = R })
     where
     S : Set
     S = ⊤
@@ -58,7 +58,7 @@ H-HCont = lam (lam (ne (record { S = S ; P = P ; R = R })))
 
   R : (s : S) (x : Var Γ₀ A) (p : P s x) → Sp Γ₀ A ∘
   R tt vz tt = ε
-  R tt (vs vz) p = F-Nf , ε
+  R tt (vs vz) p = FX-Nf , ε
 
 {- Plus -}
 

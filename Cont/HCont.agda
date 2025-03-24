@@ -1,5 +1,3 @@
-{-# OPTIONS --type-in-type --allow-unsolved-metas #-}
-
 module Cont.HCont where
 
 open import Data.Product
@@ -7,11 +5,13 @@ open import Data.Sum
 open import Data.Unit
 open import Data.Empty
 
+open import Level
+
 {- Syntax -}
 
 infixr 20 _⇒_
 data Ty : Set where
-  ∘ : Ty
+  * : Ty
   _⇒_ : Ty → Ty → Ty
 
 private variable A B C : Ty
@@ -29,15 +29,15 @@ data Var : Con → Ty → Set where
 
 private variable x y : Var Γ A
 
-data Nf : Con → Ty → Set
+data Nf : Con → Ty → Set₁
 
-record Ne (Γ : Con) (B : Ty) : Set
+record Ne (Γ : Con) (B : Ty) : Set₁
 
-data Sp : Con → Ty → Ty → Set
+data Sp : Con → Ty → Ty → Set₁
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
-  ne  : Ne Γ ∘ → Nf Γ ∘
+  ne  : Ne Γ * → Nf Γ *
 
 record Ne Γ B where
   inductive
@@ -50,17 +50,17 @@ data Sp where
   ε   : Sp Γ A A
   _,_ : Nf Γ A → Sp Γ B C → Sp Γ (A ⇒ B) C
 
-HCont : Ty → Set
+HCont : Ty → Set₁
 HCont A = Nf ∙ A
 
 {- Semantics -}
 
-⟦_⟧T : Ty → Set
-⟦ ∘ ⟧T = Set
+⟦_⟧T : Ty → Set₁
+⟦ * ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
-⟦_⟧C : Con → Set
-⟦ ∙ ⟧C = ⊤
+⟦_⟧C : Con → Set₁
+⟦ ∙ ⟧C = Lift (suc zero) ⊤
 ⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
 ⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
@@ -68,7 +68,7 @@ HCont A = Nf ∙ A
 ⟦ vs x ⟧v (γ , a) = ⟦ x ⟧v γ
 
 ⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
-⟦_⟧ne : Ne Γ ∘ → ⟦ Γ ⟧C → Set
+⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
 ⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
 
 ⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
@@ -80,8 +80,8 @@ HCont A = Nf ∙ A
 ⟦ ε ⟧sp γ a = a
 ⟦ n , ns ⟧sp γ f = ⟦ ns ⟧sp γ (f (⟦ n ⟧nf γ))
 
-⟦_⟧hcont : HCont A → ⟦ A ⟧T
-⟦ x ⟧hcont = ⟦ x ⟧nf tt
+⟦_⟧ : HCont A → ⟦ A ⟧T
+⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
 
 {- Weakening -}
 
@@ -161,7 +161,7 @@ nvar {Γ} {B} x =
   R tt .x p | same = ε
   R tt y () | diff .x y'
 
-ne2nf {Γ} {∘} x = ne x
+ne2nf {Γ} {*} x = ne x
 ne2nf {Γ} {A ⇒ C} record { S = S ; P = P ; R = R } =
   lam (ne2nf (record { S = S ; P = P' ; R = R' }))
   where
@@ -173,19 +173,38 @@ ne2nf {Γ} {A ⇒ C} record { S = S ; P = P ; R = R } =
   R' s vz ()
   R' s (vs x) p = appSp (wkSp vz (R s x p)) (nvar vz)
 
+{-
 {- Normalization -}
 
 _[_:=_] : Nf Γ B → (x : Var Γ A) → Nf (Γ - x) A → Nf (Γ - x) B
-_<_:=_> : Sp Γ A B → (x : Var Γ A) → Nf (Γ - x) A → Sp (Γ - x) A B
+
+_<_:=_> : Sp Γ B C → (x : Var Γ A) → Nf (Γ - x) A → Sp (Γ - x) B C
+
 _◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 
-_[_:=_] = {!!}
-_<_:=_> = {!!}
-_◇_ = {!!}
+napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
+
+lam t [ x := u ] = lam (t [ vs x := wkNf vz u ])
+ne {Γ} record { S = S ; P = P ; R = R } [ x := u ] =
+  ne (record { S = S ; P = P' ; R = R' })
+  where
+  P' : S → Var (Γ - x) A → Set
+  P' s y = P s (wkv x y)
+
+  R' : (s : S) (y : Var (Γ - x) A) → P' s y → Sp (Γ - x) A *
+  R' s y p with eq x (wkv x y)
+  ... | b = {!!}
+
+ε < x := u > = ε
+(t , ts) < x := u > = t [ x := u ] , ts < x := u >
+
+t ◇ ε = t
+t ◇ (u , us) = napp t u ◇ us
+
+napp (lam t) u = t [ vz := u ]
 
 infixl 20 _$_
-_$_ : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
-lam t $ u = t [ vz := u ]
+_$_ = napp
+-}
 
 {- Degree ?? -}
-

@@ -1,11 +1,9 @@
-{-# OPTIONS --guardedness --cubical #-}
-
 module NCont where
 
-open import Cubical.Foundations.Prelude
-open import Cubical.Foundations.Function
-open import Cubical.Data.Nat
-open import Cubical.Data.Fin
+open import Data.Nat
+open import Data.Fin
+
+open import Function.Base
 
 record Cont {n : ℕ} : Set₁ where
   constructor _◃_
@@ -21,18 +19,18 @@ record _⇒_ {n : ℕ} (M N : Cont {n}) : Set where
     u : S → T
     f : {i : Fin n} (s : S) → Q i (u s) → P i s
 
-record ⟦_⟧ {n : ℕ} (S◃P : Cont {n}) (X : Fin n → Set) : Set where
+record ⟦_⟧ {n : ℕ} (SP : Cont {n}) (X : Fin n → Set) : Set where
   constructor _,_
-  open Cont S◃P
+  open Cont SP
   field
     s : S
     p : {i : _} → P i s → X i
 
-⟦_⟧₁ : {n : ℕ} (S◃P : Cont {n})
+⟦_⟧₁ : {n : ℕ} (SP : Cont {n})
   → {X Y : Fin n → Set} (f : {i : _} → X i → Y i) 
-  → ⟦ S◃P ⟧ X → ⟦ S◃P ⟧ Y
-⟦ S ◃ P ⟧₁ f (s , g) = s , f ∘ g
+  → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
+⟦ S ◃ P ⟧₁ f (s , g) = s , (f ∘ g)
 
-⟦_⟧₂ : {n : ℕ} {S◃P T◃Q : Cont {n}} (u◃f : S◃P ⇒ T◃Q)
-  → (X : Fin n → Set) → ⟦ S◃P ⟧ X → ⟦ T◃Q ⟧ X
-⟦ u ◃ f ⟧₂ X (s , h) = u s , h ∘ f s
+⟦_⟧₂ : {n : ℕ} {SP TQ : Cont {n}} (u◃f : SP ⇒ TQ)
+  → (X : Fin n → Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+⟦ u ◃ f ⟧₂ X (s , h) = u s , (h ∘ f s)

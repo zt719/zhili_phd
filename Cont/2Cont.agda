@@ -1,49 +1,48 @@
-{-# OPTIONS --guardedness --cubical #-}
+module Cont.2Cont where
 
-module 2Cont where
+open import Data.Empty
+open import Data.Unit
+open import Data.Sum
+open import Data.Product
 
-open import Cubical.Data.Empty using (⊥)
-open import Cubical.Data.Unit renaming (Unit to ⊤)
-open import Cubical.Data.Sum using (_⊎_; inl; inr)
-open import Cubical.Data.Sigma using (Σ-syntax; _×_; _,_)
-
-record Cont₂ : Set₁ where
+record 2Cont : Set₁ where
   inductive
   field
     S : Set
+    P-X : S → Set
     P-F : S → Set
-    P-A : S → Set
-    R-F : (s : S) → P-F s → Cont₂
+    R-F : (s : S) → P-F s → 2Cont
 
 {-# NO_POSITIVITY_CHECK #-}
-record ⟦_⟧ (cont : Cont₂) (F : Set → Set) (A : Set) : Set where
+record ⟦_⟧ (2cont : 2Cont) (F : Set → Set) (X : Set) : Set where
   inductive
-  open Cont₂ cont
+  open 2Cont 2cont
   field
     s : S
-    p-f : (p : P-F s) → F (⟦ R-F s p ⟧ F A)
-    p-a : P-A s → A
+    p-f : (p : P-F s) → F (⟦ R-F s p ⟧ F X)
+    p-a : P-X s → X
 
-H : (Set → Set) → Set → Set
-H F A = A × F (F A)
+X : 2Cont
+X = record
+  { S = ⊤
+  ; P-X = λ{ tt → ⊤ }
+  ; P-F = λ{ tt → ⊥ }
+  ; R-F = λ{ tt () }
+  }
 
-H′′-Cont : Cont₂
-Cont₂.S H′′-Cont = ⊤
-Cont₂.P-F H′′-Cont = λ x → ⊥
-Cont₂.P-A H′′-Cont = λ x → ⊤
-Cont₂.R-F H′′-Cont = λ s ()
+FX : 2Cont
+FX = record
+  { S = ⊤
+  ; P-X = λ{ tt → ⊥ }
+  ; P-F = λ{ tt → ⊤ }  
+  ; R-F = λ{ tt tt → X }
+  }
 
-H′-Cont : Cont₂
-Cont₂.S H′-Cont = ⊤
-Cont₂.P-F H′-Cont = λ x → ⊤
-Cont₂.P-A H′-Cont = λ x → ⊥
-Cont₂.R-F H′-Cont = λ s p → H′′-Cont
+X×FFX : 2Cont
+X×FFX = record
+  { S = ⊤
+  ; P-X = λ{ tt → ⊤ }
+  ; P-F = λ{ tt → ⊤ }
+  ; R-F = λ{ tt tt → FX }
+  }
 
-H-Cont : Cont₂
-Cont₂.S H-Cont = ⊤
-Cont₂.P-F H-Cont = λ x → ⊤
-Cont₂.P-A H-Cont = λ x → ⊤
-Cont₂.R-F H-Cont = λ s p → H′-Cont
-
-H′ : (Set → Set) → Set → Set
-H′ = ⟦ H-Cont ⟧
