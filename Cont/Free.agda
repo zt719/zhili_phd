@@ -1,4 +1,5 @@
 {-# OPTIONS --cubical #-}
+
 module Cont.Free where
 
 open import Cubical.Foundations.Prelude

@@ -1,5 +1,7 @@
 {-# OPTIONS --type-in-type --cubical #-}
 
+module Cont.HFunc where
+
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit renaming (Unit to ⊤)
 open import Cubical.Data.Sigma
@@ -51,14 +53,14 @@ postulate
     → Nat.η α ≡ Nat.η β
     → α ≡ β
 
-⟦_⟧F : (A : Ty) → ⟦ A ⟧T → Set
-⟦_⟧C : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧F)
+⟦_⟧Func : (A : Ty) → ⟦ A ⟧T → Set
+⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧Func)
 
-⟦ * ⟧F X = ⊤
-⟦ A ⇒ B ⟧F H = Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧F F → ⟦ B ⟧F (H F)) ]
-               Func ⟦ A ⟧C ⟦ B ⟧C (λ (F , FF) → H F , HH F FF)
+⟦ * ⟧Func X = ⊤
+⟦ A ⇒ B ⟧Func H = Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧Func F → ⟦ B ⟧Func (H F)) ]
+               Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
 
-⟦ * ⟧C = record
+⟦ * ⟧Cat = record
   { Hom = λ (X , _) (Y , _) → X → Y
   ; id = λ x → x
   ; _∘_ = λ f g x → f (g x)
@@ -67,9 +69,9 @@ postulate
   ; ass = λ f g h → refl
   }
 
-⟦ A ⇒ B ⟧C = record
+⟦ A ⇒ B ⟧Cat = record
   { Hom = λ (F , FF , FFF) (G , GG , GGG)
-    → Nat ⟦ A ⟧C ⟦ B ⟧C (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
+    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
 
   ; id = record { η = λ X → id ; nat = λ f → idr _ ∙ sym (idl _) }
   ; _∘_ = λ{ record { η = η₁ ; nat = nat₁ } record { η = η₂ ; nat = nat₂ }
@@ -80,74 +82,4 @@ postulate
   ; ass = λ α β γ → Nat≡ (λ i X → ass (α .Nat.η X) (β .Nat.η X) (γ .Nat.η X) i)
   }
   where
-    open Cat ⟦ B ⟧C
-
-N : ⟦ * ⇒ * ⟧T
-N X = ⊤ ⊎ X
-
-FuncN : ⟦ * ⇒ * ⟧F N
-FuncN = _ , record
-  { fmap = λ{ f (inl tt) → inl tt ; f (inr x) → inr (f x) }
-  ; fmapid = λ{ i (inl tt) → inl tt ; i (inr x) → inr x }
-  ; fmap∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr x) → inr (f (g x)) }
-  }
-
-B : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T
-B F X = X × F (F X)
-
-FuncB : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧F B
-FuncB = BB , BBB
-  where
-  open Func
-  
-  BB : (F : Set → Set) → ⟦ * ⇒ * ⟧F F → ⟦ * ⇒ * ⟧F (B F)
-  BB F (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ }) = _ , record
-    { fmap = λ f (x , ffx) → f x , fmap (fmap f) ffx
-    ; fmapid = λ i (x , ffx) → x , (cong fmap fmapid ∙ fmapid) i ffx
-    ; fmap∘ = λ f g i (x , ffx) → f (g x) , (cong fmap (fmap∘ f g) ∙ fmap∘ (fmap f) (fmap g)) i ffx
-    }
-
-  BBB : Func ⟦ * ⇒ * ⟧C ⟦ * ⇒ * ⟧C _
-  BBB .fmap {F , _ , FF} {G , _ , GG} record { η = η ; nat = nat }
-    = record
-    { η = λ (X , _) (x , ffx) → x , η (G X , tt) (fmap FF (η (X , tt)) ffx)
-    ; nat = λ f i (x , ffx) → f x , aux f i ffx
-    }
-    where
-      open Cat ⟦ * ⟧C
-      aux : {X Y : Set} (f : X → Y)
-        → fmap GG (fmap GG f) ∘ η (G X , tt) ∘ fmap FF (η (X , tt))
-        ≡ η (G Y , tt) ∘ fmap FF (η (Y , tt)) ∘ fmap FF (fmap FF f)
-      aux {X} {Y} f =
-        fmap GG (fmap GG f) ∘ η (G X , tt) ∘ fmap FF (η (X , tt))
-          ≡⟨ cong (fmap GG (fmap GG f) ∘_) (sym (nat (η (X , tt)))) ⟩
-        fmap GG (fmap GG f) ∘ fmap GG (η (X , tt)) ∘ η (F X , tt)
-          ≡⟨ cong (_∘ η (F X , tt)) (sym (fmap∘ GG (fmap GG f) (η (X , tt)))) ⟩
-        fmap GG (fmap GG f ∘ η (X , tt)) ∘ η (F X , tt)
-          ≡⟨ cong (_∘ η (F X , tt)) (cong (fmap GG) (nat f)) ⟩
-        fmap GG (η (Y , tt) ∘ fmap FF f) ∘ η (F X , tt)
-          ≡⟨ cong (_∘ η (F X , tt)) (fmap∘ GG (η (Y , tt)) (fmap FF f)) ⟩
-        fmap GG (η (Y , tt)) ∘ fmap GG (fmap FF f) ∘ η (F X , tt)
-          ≡⟨ cong (fmap GG (η (Y , tt)) ∘_) (nat (fmap FF f)) ⟩
-        fmap GG (η (Y , tt)) ∘ η (F Y , tt) ∘ fmap FF (fmap FF f)
-          ≡⟨ cong (_∘ fmap FF (fmap FF f)) (nat (η (Y , tt))) ⟩
-        η (G Y , tt) ∘ fmap FF (η (Y , tt)) ∘ fmap FF (fmap FF f)
-          ∎
-
-  BBB .fmapid {F , _ , FF} = Nat≡ (λ i (X , _) (x , ffx) → x , fmapid FF i ffx)
-
-  BBB .fmap∘ {F , _ , FF} {G , _ , GG} {H , _ , HH}
-    record { η = η₁ ; nat = nat₁ }
-    record { η = η₂ ; nat = nat₂ }
-    = Nat≡ (λ i (X , _) (x , ffx) → x , aux i ffx)
-    where
-      open Cat ⟦ * ⟧C
-      aux : {X : Set}
-        → η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ fmap FF(η₁ (X , tt) ∘ η₂ (X , tt))
-        ≡ η₁ (H X , tt) ∘ fmap GG (η₁ (X , tt)) ∘ η₂ (G X , tt) ∘ fmap FF (η₂ (X , tt))
-      aux {X} =
-        η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ fmap FF (η₁ (X , tt) ∘ η₂ (X , tt))
-          ≡⟨ cong ((η₁ (H X , tt) ∘ η₂ (H X , tt)) ∘_) (fmap∘ FF (η₁ (X , tt)) (η₂ (X , tt))) ⟩
-        η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ fmap FF (η₁ (X , tt)) ∘ fmap FF (η₂ (X , tt))
-          ≡⟨ cong (η₁ (H X , tt) ∘_) (cong (_∘ fmap FF (η₂ (X , tt))) (sym (nat₂ (η₁ (X , tt))))) ⟩
-        η₁ (H X , tt) ∘ fmap GG (η₁ (X , tt)) ∘ η₂ (G X , tt) ∘ fmap FF (η₂ (X , tt)) ∎
+    open Cat ⟦ B ⟧Cat

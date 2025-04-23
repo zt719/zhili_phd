@@ -4,20 +4,20 @@ open import Data.Unit
 open import Data.Product
 
 data Ty : Set where
-  ∘ : Ty
+  * : Ty
   _⇒_ : Ty → Ty → Ty
 
 private variable A B C : Ty
 
 ⟦_⟧T : Ty → Set
-⟦ ∘ ⟧T = Set
+⟦ * ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
 record Cat (Obj : Set) : Set where
   field
     Hom : Obj → Obj → Set
     id : ∀ {X} → Hom X X
-    comp : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
+    _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
 open Cat    
 
 record Func {X Y : Set} (C : Cat X) (D : Cat Y) (F : X → Y) : Set where
@@ -29,27 +29,28 @@ record Nat {X Y : Set}(C : Cat X)(D : Cat Y)(F G : X → Y)
   field
     η : ∀ X → Hom D (F X) (G X)
 
-⟦_⟧F : (A : Ty) → ⟦ A ⟧T → Set
-⟦_⟧C : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧F)
+⟦_⟧Func : (A : Ty) → ⟦ A ⟧T → Set
+⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧Func)
 
-⟦ ∘ ⟧F X = ⊤
-⟦ A ⇒ B ⟧F H = Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧F F → ⟦ B ⟧F (H F)) ]
-               Func ⟦ A ⟧C ⟦ B ⟧C (λ (F , FF) → H F , HH F FF)
+⟦ * ⟧Func X = ⊤
+⟦ A ⇒ B ⟧Func H = Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧Func F → ⟦ B ⟧Func (H F)) ]
+               Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
 
-⟦ ∘ ⟧C = record
+⟦ * ⟧Cat = record
   { Hom = λ (X , _) (Y , _) → X → Y
   ; id = λ x → x
-  ; comp = λ f g x → f (g x)
+  ; _∘_ = λ f g x → f (g x)
   }
 
-⟦ A ⇒ B ⟧C = record
+⟦ A ⇒ B ⟧Cat = record
   { Hom = λ (F , FF , FFF) (G , GG , GGG)
-    → Nat ⟦ A ⟧C ⟦ B ⟧C (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
+    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
 
-  ; id = record { η = λ X → id ⟦ B ⟧C }
-  ; comp = λ{ record { η = η₁ } record { η = η₂ }
-         → record { η = λ X → comp ⟦ B ⟧C (η₁ X) (η₂ X) } }
+  ; id = record { η = λ X → id ⟦ B ⟧Cat }
+  ; _∘_ = λ{ record { η = η₁ } record { η = η₂ }
+         → record { η = λ X → _∘_ ⟦ B ⟧Cat (η₁ X) (η₂ X) } }
   }
+  
 
 infixl 5 _▹_
 data Con : Set where
@@ -71,7 +72,7 @@ record Ne (Γ : Con) (B : Ty) : Set
 data Sp : Con → Ty → Ty → Set
 
 data Nf where
-  ne  : Ne Γ ∘ → Nf Γ ∘
+  ne  : Ne Γ * → Nf Γ *
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
 
 record Ne Γ B where
@@ -90,17 +91,17 @@ HCont A = Nf ∙ A
 
 {- Semantics -}
 
-⟦_⟧Con : Con → Set
-⟦ ∙ ⟧Con = ⊤
-⟦ Γ ▹ A ⟧Con = ⟦ Γ ⟧Con × ⟦ A ⟧T
+⟦_⟧C : Con → Set
+⟦ ∙ ⟧C = ⊤
+⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
-⟦_⟧v : Var Γ A → ⟦ Γ ⟧Con → ⟦ A ⟧T
+⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 ⟦ vz ⟧v (γ , a) = a
 ⟦ vs x ⟧v (γ , a) = ⟦ x ⟧v γ
 
-⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧Con → ⟦ A ⟧T
-⟦_⟧ne : Ne Γ ∘ → ⟦ Γ ⟧Con → Set
-⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧Con → ⟦ A ⟧T → ⟦ B ⟧T
+⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
+⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
+⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
 
 ⟦ ne x ⟧nf γ = ⟦ x ⟧ne γ
 ⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
@@ -116,14 +117,12 @@ HCont A = Nf ∙ A
 
 {- More -}
 
-
-{-
-nf2hf : (H : Nf Γ A) (γ : ⟦ Γ ⟧Con)→ ⟦ A ⟧F (⟦ H ⟧nf γ)
+nf2hf : (H : Nf Γ A) (γ : ⟦ Γ ⟧C)→ ⟦ A ⟧Func (⟦ H ⟧nf γ)
 nf2hf (ne x) γ = tt
 nf2hf (lam H) γ = (λ F x → nf2hf H (γ , F)) , record { fmap =
   λ {(F , FF)} {(G , GG)} f → {!!}
   }
 
-nc2nf : (H : HCont A) → ⟦ A ⟧F ⟦ H ⟧hcont
+nc2nf : (H : HCont A) → ⟦ A ⟧Func ⟦ H ⟧
 nc2nf H = nf2hf H tt
--}
+
