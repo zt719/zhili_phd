@@ -51,6 +51,18 @@ record ⟦_⟧ (C : 2Cont) (F : Set → Set) (X : Set) : Set where
     k : (p₀ : P₀ s) → F (⟦ R₀ s p₀ ⟧ F X)
     l : P₁ s → X
 
+open 2Cont
+{-# TERMINATING #-}
+⟦_⟧₁ : (C : 2Cont)
+  → {F G : Set → Set} {F₁ : ∀ {X Y} → (X → Y) → F X → F Y} → (∀ X → F X → G X)
+  → {X Y : Set} → (X → Y)
+  → ⟦ C ⟧ F X → ⟦ C ⟧ G Y
+⟦ C ⟧₁ {F} {G} {F₁} α {X} {Y} f record { s = s ; k = k ; l = l } = record
+  { s = s
+  ; k = λ p₀ → α (⟦ C .R₀ s p₀ ⟧ G Y) (F₁ (⟦ C .R₀ s p₀ ⟧₁ {F₁ = F₁} α f) (k p₀))
+  ; l = f ∘ l
+  }
+
 {-# TERMINATING #-}
 ⟦_⟧₂ : {C D : 2Cont} (δ : 2ContHom C D) →
   (F : Set → Set) (F₁ : ∀ {X Y} → (X → Y) → F X → F Y) (X : Set) → ⟦ C ⟧ F X → ⟦ D ⟧ F X

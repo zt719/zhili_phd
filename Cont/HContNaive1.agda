@@ -1,4 +1,4 @@
-module Cont.HContNaive where
+module Cont.HContNaive1 where
 
 open import Data.Product
 open import Data.Sum
@@ -45,13 +45,8 @@ record Ne Γ where
   inductive
   field
     S : Set
-    PR : Var Γ A → S → Σ[ P ∈ Set ] (P → Sp Γ A)
-
-  P : Var Γ A → S → Set
-  P x s = PR x s .proj₁
-
-  R : (x : Var Γ A) (s : S) → P x s → Sp Γ A
-  R x s = PR x s .proj₂
+    P : Var Γ A → S → Set
+    R : (x : Var Γ A) (s : S) → P x s → Sp Γ A
 
 private variable m n : Ne Γ
 
@@ -85,15 +80,8 @@ HCont A = Nf ∙ A
 ⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
 ⟦ ne x ⟧nf γ = ⟦ x ⟧ne γ
 
-⟦_⟧ne {Γ} record { S = S ; PR = PR } γ =
+⟦_⟧ne {Γ} record { S = S ; P = P ; R = R } γ =
   Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P x s) → ⟦ R x s p ⟧sp γ (⟦ x ⟧v γ))
-  where
-  P : Var Γ A → S → Set
-  P x s = PR x s .proj₁
-
-  R : (x : Var Γ A) (s : S) → P x s → Sp Γ A
-  R x s = PR x s .proj₂
-  {-# INLINE R #-}
 
 ⟦ ε ⟧sp γ a = a
 ⟦ n , ns ⟧sp γ f = ⟦ ns ⟧sp γ (f (⟦ n ⟧nf γ))
@@ -101,12 +89,12 @@ HCont A = Nf ∙ A
 ⟦_⟧ : HCont A → ⟦ A ⟧T
 ⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
 
-record SpHom (_ _ : Sp Γ A) : Set where
-  {- ??? -}
+record SpHom (_ _ : Sp Γ A) : Set₁ where
 
-record NeHom (C D : Ne Γ) : Set where
+record NeHom (C D : Ne Γ) : Set₁ where
   open Ne
   field
     f : C .S → D .S
-    gh : (x : Var Γ A) (s : C .S) (pD : D .PR x (f s) .proj₁) →
-      Σ[ pC ∈ C .PR x s .proj₁ ] SpHom (C .PR x s .proj₂ pC) (D .PR x (f s) .proj₂ pD)
+    g : (x : Var Γ A) (s : C .S) → D .P x (f s) → C .P x s
+    h : (x : Var Γ A) (s : C .S) (p : D .P x (f s))
+      → SpHom (C .R x s (g x s p)) (D .R x (f s) p)

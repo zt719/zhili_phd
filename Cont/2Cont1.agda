@@ -23,14 +23,14 @@ record Cat : Set where
   FAM .Hom (I , F) (J , G) =
     Σ[ f ∈ (I → J) ] ((i : I) → Hom (F i) (G (f i)))
   FAM .ID = id , λ i → ID
-  FAM .COM (f , α) (g , β) = (f ∘ g) , λ i → COM (α (g i)) (β i)
+  FAM .COM (f , α) (g , β) = f ∘ g , λ i → COM (α (g i)) (β i)
 -}
 
   FAM⁻ : Cat
   FAM⁻ .Obj = Σ[ I ∈ Set ] (I → Obj)
   FAM⁻ .Hom (I , F) (J , G) = Σ[ f ∈ (I → J) ] ((i : I) → Hom (G (f i)) (F i))
-  FAM⁻ .ID = (λ i → i) , λ i → ID
-  FAM⁻ .COM (f , α) (g ,  β) = (λ z → f (g z)) , λ i → COM (β i) (α (g i))
+  FAM⁻ .ID = id , λ i → ID
+  FAM⁻ .COM (f , α) (g ,  β) = f ∘ g , λ i → COM (β i) (α (g i))
 open Cat
 
 record 2Cont : Set
@@ -64,10 +64,10 @@ open 2ContHom
 2CONT .ID .f = id
 2CONT .ID .g₁ s = id
 2CONT .ID .g₀ s = id , λ i → 2CONT .ID
-2CONT .COM YZ XY .f = YZ .f ∘ XY .f
-2CONT .COM YZ XY .g₁ s = XY .g₁ s ∘ YZ .g₁ (XY .f s)
-2CONT .COM YZ XY .g₀ s = (XY .g₀ s .proj₁ ∘ YZ .g₀ (XY .f s) .proj₁)
-  , λ i → 2CONT .COM (YZ .g₀ (XY .f s) .proj₂ i) (XY .g₀ s .proj₂ (YZ .g₀ (XY .f s) .proj₁ i))
+2CONT .COM δ γ .f = δ .f ∘ γ .f
+2CONT .COM δ γ .g₁ s = γ .g₁ s ∘ δ .g₁ (γ .f s)
+2CONT .COM δ γ .g₀ s = (γ .g₀ s .proj₁ ∘ δ .g₀ (γ .f s) .proj₁)
+  , λ i → 2CONT .COM (δ .g₀ (γ .f s) .proj₂ i) (γ .g₀ s .proj₂ (δ .g₀ (γ .f s) .proj₁ i))
 
 {-# NO_POSITIVITY_CHECK #-}
 record ⟦_⟧ (C : 2Cont) (F : Set → Set) (X : Set) : Set where
