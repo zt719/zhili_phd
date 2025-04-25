@@ -55,3 +55,6 @@ Prod (S ◃ P) (T ◃ Q) = S × T ◃ λ{ (s , t) → P s ⊎ Q t }
 
 Sum : Cont → Cont → Cont
 Sum (S ◃ P) (T ◃ Q) = S ⊎ T ◃ λ{ (inj₁ s) → P s ; (inj₂ t) → Q t }
+
+-- Comp : Cont → Cont → Cont
+-- Comp (S ◃ P) (T ◃ Q) = {!!}

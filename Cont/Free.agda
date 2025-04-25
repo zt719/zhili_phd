@@ -4,7 +4,7 @@ module Cont.Free where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Empty renaming (rec to ⊥-rec)
-open import Cubical.Data.Unit
+open import Cubical.Data.Unit renaming (Unit to ⊤)
 open import Cubical.Data.Bool
 open import Cubical.Data.Sigma
 open import Cubical.Foundations.Isomorphism
@@ -70,12 +70,18 @@ module _ (FC : Cont) where
     φη⁻ (Var x , y , eq) = x
     φη⁻ (Con c , y , eq) = _
 
+{-
+data Free (FC : Cont) (A : Set) : Set where
+  Var : A → Free FC A
+  Con  : ⟦ FC ⟧ (Free FC A) → Free FC A
+-}
+
 data FreeS (FC : Cont) : Set where
   Var : FreeS FC
   Con : ⟦ FC ⟧ (FreeS FC) → FreeS FC
 
 FreeP : (FC : Cont) → FreeS FC → Set
-FreeP FC Var = Unit
+FreeP FC Var = ⊤
 FreeP (S ◃ P) (Con (s , p)) = Σ[ q ∈ P s ] FreeP (S ◃ P) (p q)
 
 FreeC : Cont → Cont

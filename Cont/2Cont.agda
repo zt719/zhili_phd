@@ -9,36 +9,17 @@ open import Data.Product
 
 open import Function.Base
 
-record Cat : Set where
-  field
-    Obj : Set
-    Hom : Obj → Obj → Set
-
-  Fam : Set
-  Fam = Σ[ I ∈ Set ] (I → Obj)
-
-  FamHom : Fam → Fam → Set
-  FamHom (I , F) (J , G) =
-    Σ[ f ∈ (I → J) ] ((i : I) → Hom (F i) (G (f i)))
-    
-open Cat
-
 record 2Cont : Set
-
 record 2ContHom (C D : 2Cont) : Set
 
-2CONT : Cat
-2CONT .Obj = 2Cont
-2CONT .Hom = 2ContHom
-
+{-# NO_POSITIVITY_CHECK #-}
 record 2Cont where
   inductive
   field
     S : Set
-    P : S → Set
-    PR : S → Fam 2CONT
-    -- P₀ : S → Set
-    -- R₀ : (s : S) → P s → 2Cont
+    P₀ : S → Set
+    R₀ : (s : S) → P₀ s → 2Cont
+    P₁ : S → Set
 
 record 2ContHom C D where
   inductive
@@ -46,23 +27,19 @@ record 2ContHom C D where
   open 2Cont
   field
     f : C .S → D .S
-    g : (s : C .S) → D .P (f s) → C .P s
-    h : (s : C .S) → FamHom 2CONT (D .PR (f s)) (C .PR s)
-open 2ContHom
+    g₀ : (s : C .S) → D .P₀ (f s) → C .P₀ s
+    h₀ : (s : C .S) (p₀ : D .P₀ (f s)) → 2ContHom (C .R₀ s (g₀ s p₀)) (D .R₀ (f s) p₀) 
+    g₁ : (s : C .S) → D .P₁ (f s) → C .P₁ s
 
-{-# TERMINATING #-}
-idHom : ∀ {X} → 2ContHom X X
-idHom .2ContHom.f = id
-idHom .2ContHom.g s = id
-idHom .2ContHom.h s = id , λ i → idHom
-
-{-# TERMINATING #-}
-_∘Hom_ : ∀ {X Y Z} → 2ContHom Y Z → 2ContHom X Y → 2ContHom X Z
-(δ ∘Hom γ) .f = δ .f ∘ γ .f
-(δ ∘Hom γ) .g s = γ .g s ∘ δ .g (γ .f s)
-(δ ∘Hom γ) .h s =
-  γ .h s .proj₁ ∘ δ .h (γ .f s) .proj₁
-  , λ i → {!_∘Hom_!}
+module _ where
+  open 2ContHom
+  
+  {-# TERMINATING #-}
+  2ContHomComp : ∀ {C D E} → 2ContHom D E → 2ContHom C D → 2ContHom C E
+  2ContHomComp δ γ .f = δ .f ∘ γ .f
+  2ContHomComp δ γ .g₀ s = γ .g₀ s ∘ δ .g₀ (γ .f s)
+  2ContHomComp δ γ .h₀ s p₀ = 2ContHomComp (δ .h₀ (γ .f s) p₀) (γ .h₀ s (δ .g₀ (γ .f s) p₀))
+  2ContHomComp δ γ .g₁ s = γ .g₁ s ∘ δ .g₁ (γ .f s)
 
 {-# NO_POSITIVITY_CHECK #-}
 record ⟦_⟧ (C : 2Cont) (F : Set → Set) (X : Set) : Set where
@@ -71,11 +48,12 @@ record ⟦_⟧ (C : 2Cont) (F : Set → Set) (X : Set) : Set where
   open 2Cont C
   field
     s : S
-    p : P s → X
-    k : (p₀ : PR s .proj₁) → F (⟦ PR s .proj₂ p₀ ⟧ F X)
+    k : (p₀ : P₀ s) → F (⟦ R₀ s p₀ ⟧ F X)
+    l : P₁ s → X
 
-⟦_⟧₁ : {C D : 2Cont} (δ : 2ContHom C D) →
-  (F : Set → Set) (X : Set) → ⟦ C ⟧ F X → ⟦ D ⟧ F X
-⟦ record { f = f ; g = g ; h = h } ⟧₁ F X
-  record { s = s ; p = p ; k = k } =
-  record { s = f s ; p = p ∘ g s ; k = {!!} }
+{-# TERMINATING #-}
+⟦_⟧₂ : {C D : 2Cont} (δ : 2ContHom C D) →
+  (F : Set → Set) (F₁ : ∀ {X Y} → (X → Y) → F X → F Y) (X : Set) → ⟦ C ⟧ F X → ⟦ D ⟧ F X
+⟦ record { f = f ; g₀ = g₀ ; h₀ = h₀ ; g₁ = g₁ } ⟧₂ F F₁ X
+  record { s = s ; k = k ; l = l } =
+  record { s = f s ; k = λ p₀ → F₁ (⟦ h₀ s p₀ ⟧₂ F F₁ X) (k (g₀ s p₀)) ; l = l ∘ g₁ s }

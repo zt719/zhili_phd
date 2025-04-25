@@ -28,7 +28,8 @@ FuncB = BB , BBB
   open Func
   
   BB : (F : Set → Set) → ⟦ * ⇒ * ⟧Func F → ⟦ * ⇒ * ⟧Func (B F)
-  BB F (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ }) = _ , record
+  BB F (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ })
+    = _ , record
     { fmap = λ f (x , ffx) → f x , fmap (fmap f) ffx
     ; fmapid = λ i (x , ffx) → x , (cong fmap fmapid ∙ fmapid) i ffx
     ; fmap∘ = λ f g i (x , ffx) → f (g x) , (cong fmap (fmap∘ f g) ∙ fmap∘ (fmap f) (fmap g)) i ffx
@@ -105,3 +106,46 @@ FuncL = LL , LLL
     record { η = η₁ ; nat = nat₁ }
     record { η = η₂ ; nat = nat₂ }
     = Nat≡ λ{ i (X , _) (inl tt) → inl tt ; i (X , _) (inr (x , fx)) → inr (x , η₁ (X , tt) (η₂ (X , tt) fx)) }
+
+open import Data.Maybe
+open import Function.Base
+
+Maybe₁ : ∀ {X Y} → (X → Y) → Maybe X → Maybe Y
+Maybe₁ f (just x) = just (f x)
+Maybe₁ f nothing = nothing
+
+Maybeid : ∀ {X} → Maybe₁ {X} (λ x → x) ≡ λ x → x
+Maybeid i (just x) = just x
+Maybeid i nothing = nothing
+
+Maybe∘ : ∀ {X Y Z} (f : Y → Z) (g : X → Y)
+  → Maybe₁ (f ∘ g) ≡ Maybe₁ f ∘ Maybe₁ g
+Maybe∘ f g i (just x) = just (f (g x))
+Maybe∘ f g i nothing = nothing
+
+MaybeT : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T
+MaybeT M X = M (Maybe X)
+
+{-
+MaybeT-HFunc : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧Func MaybeT
+MaybeT-HFunc = MTMT , MTMTMT
+  where
+  MTMT : (M : Set → Set) → ⟦ * ⇒ * ⟧Func M → ⟦ * ⇒ * ⟧Func (MaybeT M)
+  MTMT M (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ })
+    = _ , record
+    { fmap = fmap ∘ Maybe₁
+    ; fmapid = cong fmap Maybeid ∙ fmapid
+    ; fmap∘ = λ f g → cong fmap (Maybe∘ f g) ∙ fmap∘ (Maybe₁ f) (Maybe₁ g)
+    }
+
+  open Func
+
+  MTMTMT : Func ⟦ * ⇒ * ⟧Cat ⟦ * ⇒ * ⟧Cat _
+  MTMTMT .fmap record { η = η ; nat = nat } = record
+    { η = λ (X , _) x → η (Maybe X , _) x
+    ; nat = λ f i x → {!!}
+    }
+  
+  MTMTMT .fmapid = {!!}
+  MTMTMT .fmap∘ = {!!}
+-}

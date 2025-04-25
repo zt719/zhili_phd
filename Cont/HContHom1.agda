@@ -1,4 +1,4 @@
-module Cont.HCont where
+module Cont.HContHom1 where
 
 open import Data.Product
 open import Data.Sum
@@ -45,9 +45,10 @@ record Ne Γ B where
   inductive
   field
     S : Set
-    P : S → Var Γ A → Set
-    R : (s : S) (x : Var Γ A) → P s x → Sp Γ A B
-
+    -- P : Var Γ A → S → Set
+    -- R : (x : Var Γ A) (s : S) (p : P x s) → Sp Γ A B
+    PR : Var Γ A → S → Σ[ P ∈ Set ] (P → Sp Γ A B)
+    
 private variable m n : Ne Γ A
 
 data Sp where
@@ -76,28 +77,18 @@ HCont A = Nf ∙ A
 ⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 
 ⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
--- record ⟦_⟧ne (_ : Ne Γ *) (γ : ⟦ Γ ⟧C) : Set
 
 ⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
 
 ⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
 ⟦ ne x ⟧nf γ = ⟦ x ⟧ne γ
 
-⟦_⟧ne {Γ} record { S = S ; P = P ; R = R } γ =
-  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))
-
-{-
-{-# NO_POSITIVITY_CHECK #-}
-record ⟦_⟧ne {Γ} n γ where
-  inductive
-  open Ne n
-  field
-    s : S
-    p : {A : Ty} (x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ)
--}
+⟦_⟧ne {Γ} record { S = S ; PR = PR } γ =
+  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : PR x s .proj₁) → ⟦ PR x s .proj₂ p ⟧sp γ (⟦ x ⟧v γ))
 
 ⟦ ε ⟧sp γ a = a
 ⟦ n , ns ⟧sp γ f = ⟦ ns ⟧sp γ (f (⟦ n ⟧nf γ))
 
 ⟦_⟧ : HCont A → ⟦ A ⟧T
 ⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
+

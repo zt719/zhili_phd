@@ -1,5 +1,3 @@
-{-# OPTIONS --type-in-type #-}
-
 module Cont.HContExample where
 
 open import Data.Product
@@ -15,7 +13,6 @@ open import Cont.HCont
 private
   variable
     A B C : Ty
-
 
 MaybeHCont : HCont (* ⇒ *)
 MaybeHCont = lam (ne (record { S = S ; P = P ; R = R }))

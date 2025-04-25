@@ -1,5 +1,7 @@
 {-# OPTIONS --type-in-type #-}
 
+module Cont.HContHFuncVanillaSimple where
+
 open import Data.Unit
 open import Data.Product
 
@@ -119,10 +121,13 @@ HCont A = Nf ∙ A
 
 nf2hf : (H : Nf Γ A) (γ : ⟦ Γ ⟧C)→ ⟦ A ⟧Func (⟦ H ⟧nf γ)
 nf2hf (ne x) γ = tt
-nf2hf (lam H) γ = (λ F x → nf2hf H (γ , F)) , record { fmap =
-  λ {(F , FF)} {(G , GG)} f → {!!}
+nf2hf (lam H) γ = (λ F x → nf2hf H (γ , F)) , record { fmap = λ f → {!!} }
+
+{-(λ F x → nf2hf H (γ , F))
+  , record { fmap =
+    λ {(F , FF)} {(G , GG)} f → {!!}
   }
+-}
 
 nc2nf : (H : HCont A) → ⟦ A ⟧Func ⟦ H ⟧
 nc2nf H = nf2hf H tt
-

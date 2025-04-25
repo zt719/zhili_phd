@@ -1,4 +1,4 @@
-module Cont.HCont where
+module Cont.HContHom where
 
 open import Data.Product
 open import Data.Sum
@@ -45,8 +45,8 @@ record Ne Γ B where
   inductive
   field
     S : Set
-    P : S → Var Γ A → Set
-    R : (s : S) (x : Var Γ A) → P s x → Sp Γ A B
+    P : Var Γ A → S → Set
+    R : (x : Var Γ A) (s : S) (p : P x s) → Sp Γ A B
 
 private variable m n : Ne Γ A
 
@@ -84,7 +84,7 @@ HCont A = Nf ∙ A
 ⟦ ne x ⟧nf γ = ⟦ x ⟧ne γ
 
 ⟦_⟧ne {Γ} record { S = S ; P = P ; R = R } γ =
-  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ))
+  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P x s) → ⟦ R x s p ⟧sp γ (⟦ x ⟧v γ))
 
 {-
 {-# NO_POSITIVITY_CHECK #-}
@@ -93,7 +93,7 @@ record ⟦_⟧ne {Γ} n γ where
   open Ne n
   field
     s : S
-    p : {A : Ty} (x : Var Γ A) (p : P s x) → ⟦ R s x p ⟧sp γ (⟦ x ⟧v γ)
+    p : {A : Ty} (x : Var Γ A) (p : P x s) → ⟦ R x s p ⟧sp γ (⟦ x ⟧v γ)
 -}
 
 ⟦ ε ⟧sp γ a = a
