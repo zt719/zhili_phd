@@ -64,8 +64,8 @@ open 2Cont
   }
 
 {-# TERMINATING #-}
-⟦_⟧₂ : {C D : 2Cont} (δ : 2ContHom C D) →
+⟦_⟧Hom : {C D : 2Cont} (δ : 2ContHom C D) →
   (F : Set → Set) (F₁ : ∀ {X Y} → (X → Y) → F X → F Y) (X : Set) → ⟦ C ⟧ F X → ⟦ D ⟧ F X
-⟦ record { f = f ; g₀ = g₀ ; h₀ = h₀ ; g₁ = g₁ } ⟧₂ F F₁ X
+⟦ record { f = f ; g₀ = g₀ ; h₀ = h₀ ; g₁ = g₁ } ⟧Hom F F₁ X
   record { s = s ; k = k ; l = l } =
-  record { s = f s ; k = λ p₀ → F₁ (⟦ h₀ s p₀ ⟧₂ F F₁ X) (k (g₀ s p₀)) ; l = l ∘ g₁ s }
+  record { s = f s ; k = λ p₀ → F₁ (⟦ h₀ s p₀ ⟧Hom F F₁ X) (k (g₀ s p₀)) ; l = l ∘ g₁ s }

@@ -1,7 +1,7 @@
 What is a simply typed CWF?
 
 ```
-module cwf-simple where
+module CWF.cwf-simple where
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
 

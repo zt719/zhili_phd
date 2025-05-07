@@ -31,30 +31,10 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
     s : S
     p : P s → X
 
-⟦_⟧₁ : (SP : Cont) → {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
+⟦_⟧₁ : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
 ⟦ SP ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
 {-# INLINE ⟦_⟧₁ #-}
 
-⟦_⟧₂ : {SP TQ : Cont} (uf : ContHom SP TQ)
+⟦_⟧Hom : {SP TQ : Cont} (fg : ContHom SP TQ)
   → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-⟦ f ◃ g ⟧₂ X (s , p) = f s , (p ∘ g s)
-
-open import Data.Empty
-open import Data.Unit
-open import Data.Product
-open import Data.Sum
-
-𝟘 : Cont
-𝟘 = ⊥ ◃ λ ()
-
-𝟙 : Cont
-𝟙 = ⊤ ◃ λ{ tt → ⊥ }
-
-Prod : Cont → Cont → Cont
-Prod (S ◃ P) (T ◃ Q) = S × T ◃ λ{ (s , t) → P s ⊎ Q t }
-
-Sum : Cont → Cont → Cont
-Sum (S ◃ P) (T ◃ Q) = S ⊎ T ◃ λ{ (inj₁ s) → P s ; (inj₂ t) → Q t }
-
--- Comp : Cont → Cont → Cont
--- Comp (S ◃ P) (T ◃ Q) = {!!}
+⟦ f ◃ g ⟧Hom X (s , p) = f s , (p ∘ g s)

@@ -22,7 +22,7 @@ module _
 
   φ : {X Y : Set} (k : X → Y)
     → ⟦ S ◃ P ⟧ X
-    → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧₂ Y)
+    → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y)
   φ k (s , p) = (f s , p ∘ g s) , (s , k ∘ p) , refl
 
   module _
@@ -32,7 +32,7 @@ module _
     where
 
     φ⁻ : {X Y : Set} (k : X → Y)
-      → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧₂ Y)
+      → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y)
       → ⟦ S ◃ P ⟧ X
     φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.s = s
     φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.p = q ∘ transport (cong Q (sym eq-s)) ∘ g⁻ s 
@@ -59,7 +59,7 @@ module _
 
 
   module _
-    {φ⁻ : {X Y : Set} (k : X → Y) → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧₂ Y) → ⟦ S ◃ P ⟧ X}
+    {φ⁻ : {X Y : Set} (k : X → Y) → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y) → ⟦ S ◃ P ⟧ X}
     {φ⁻∘φ : {X Y : Set} (k : X → Y) → φ⁻ k ∘ φ k ≡ id}
     {φ∘φ⁻ : {X Y : Set} (k : X → Y) → φ k ∘ φ⁻ k ≡ id}
     where

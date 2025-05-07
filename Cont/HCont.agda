@@ -16,16 +16,16 @@ data Ty : Set where
 
 private variable A B C : Ty
 
-infixl 5 _▹_
+infixl 5 _▷_
 data Con : Set where
-  ∙   : Con
-  _▹_ : Con → Ty → Con
+  •   : Con
+  _▷_ : Con → Ty → Con
 
 private variable Γ Δ : Con
 
 data Var : Con → Ty → Set where
-  vz : Var (Γ ▹ A) A
-  vs : Var Γ A → Var (Γ ▹ B) A
+  vz : Var (Γ ▷ A) A
+  vs : Var Γ A → Var (Γ ▷ B) A
 
 private variable x y : Var Γ A
 
@@ -36,7 +36,7 @@ record Ne (Γ : Con) (B : Ty) : Set₁
 data Sp : Con → Ty → Ty → Set₁
 
 data Nf where
-  lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
+  lam : Nf (Γ ▷ A) B → Nf Γ (A ⇒ B)
   ne  : Ne Γ * → Nf Γ *
 
 private variable t u : Nf Γ A
@@ -57,7 +57,7 @@ data Sp where
 private variable ts us : Sp Γ A B
 
 HCont : Ty → Set₁
-HCont A = Nf ∙ A
+HCont A = Nf • A
 
 {- Semantics -}
 
@@ -66,8 +66,8 @@ HCont A = Nf ∙ A
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
 ⟦_⟧C : Con → Set₁
-⟦ ∙ ⟧C = Lift (suc zero) ⊤
-⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
+⟦ • ⟧C = Lift (suc zero) ⊤
+⟦ Γ ▷ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
 ⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 ⟦ vz ⟧v (γ , a) = a
