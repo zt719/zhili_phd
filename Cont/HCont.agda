@@ -1,9 +1,7 @@
 module Cont.HCont where
 
 open import Data.Product
-open import Data.Sum
 open import Data.Unit
-open import Data.Empty
 
 open import Level
 

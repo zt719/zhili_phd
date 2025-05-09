@@ -7,16 +7,16 @@ open import Cubical.Data.Unit renaming (Unit to ⊤)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum
 
-open import Cont.HFunc
+open import Cont.HFuncTIT
 
 N : ⟦ * ⇒ * ⟧T
 N X = ⊤ ⊎ X
 
 FuncN : ⟦ * ⇒ * ⟧Func N
 FuncN = _ , record
-  { fmap = λ{ f (inl tt) → inl tt ; f (inr x) → inr (f x) }
-  ; fmapid = λ{ i (inl tt) → inl tt ; i (inr x) → inr x }
-  ; fmap∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr x) → inr (f (g x)) }
+  { F₁ = λ{ f (inl tt) → inl tt ; f (inr x) → inr (f x) }
+  ; F-id = λ{ i (inl tt) → inl tt ; i (inr x) → inr x }
+  ; F-∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr x) → inr (f (g x)) }
   }
 
 B : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T
@@ -28,57 +28,57 @@ FuncB = BB , BBB
   open Func
   
   BB : (F : Set → Set) → ⟦ * ⇒ * ⟧Func F → ⟦ * ⇒ * ⟧Func (B F)
-  BB F (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ })
+  BB F (_ , record { F₁ = F₁ ; F-id = F-id ; F-∘ = F-∘ })
     = _ , record
-    { fmap = λ f (x , ffx) → f x , fmap (fmap f) ffx
-    ; fmapid = λ i (x , ffx) → x , (cong fmap fmapid ∙ fmapid) i ffx
-    ; fmap∘ = λ f g i (x , ffx) → f (g x) , (cong fmap (fmap∘ f g) ∙ fmap∘ (fmap f) (fmap g)) i ffx
+    { F₁ = λ f (x , ffx) → f x , F₁ (F₁ f) ffx
+    ; F-id = λ i (x , ffx) → x , (cong F₁ F-id ∙ F-id) i ffx
+    ; F-∘ = λ f g i (x , ffx) → f (g x) , (cong F₁ (F-∘ f g) ∙ F-∘ (F₁ f) (F₁ g)) i ffx
     }
 
   BBB : Func ⟦ * ⇒ * ⟧Cat ⟦ * ⇒ * ⟧Cat _
-  BBB .fmap {F , _ , FF} {G , _ , GG} record { η = η ; nat = nat }
+  BBB .F₁ {F , _ , FF} {G , _ , GG} record { η = η ; nat = nat }
     = record
-    { η = λ (X , _) (x , ffx) → x , η (G X , tt) (fmap FF (η (X , tt)) ffx)
+    { η = λ (X , _) (x , ffx) → x , η (G X , tt) (F₁ FF (η (X , tt)) ffx)
     ; nat = λ f i (x , ffx) → f x , aux f i ffx
     }
     where
       open Cat ⟦ * ⟧Cat
       aux : {X Y : Set} (f : X → Y)
-        → fmap GG (fmap GG f) ∘ η (G X , tt) ∘ fmap FF (η (X , tt))
-        ≡ η (G Y , tt) ∘ fmap FF (η (Y , tt)) ∘ fmap FF (fmap FF f)
+        → F₁ GG (F₁ GG f) ∘ η (G X , tt) ∘ F₁ FF (η (X , tt))
+        ≡ η (G Y , tt) ∘ F₁ FF (η (Y , tt)) ∘ F₁ FF (F₁ FF f)
       aux {X} {Y} f =
-        fmap GG (fmap GG f) ∘ η (G X , tt) ∘ fmap FF (η (X , tt))
-          ≡⟨ cong (fmap GG (fmap GG f) ∘_) (sym (nat (η (X , tt)))) ⟩
-        fmap GG (fmap GG f) ∘ fmap GG (η (X , tt)) ∘ η (F X , tt)
-          ≡⟨ cong (_∘ η (F X , tt)) (sym (fmap∘ GG (fmap GG f) (η (X , tt)))) ⟩
-        fmap GG (fmap GG f ∘ η (X , tt)) ∘ η (F X , tt)
-          ≡⟨ cong (_∘ η (F X , tt)) (cong (fmap GG) (nat f)) ⟩
-        fmap GG (η (Y , tt) ∘ fmap FF f) ∘ η (F X , tt)
-          ≡⟨ cong (_∘ η (F X , tt)) (fmap∘ GG (η (Y , tt)) (fmap FF f)) ⟩
-        fmap GG (η (Y , tt)) ∘ fmap GG (fmap FF f) ∘ η (F X , tt)
-          ≡⟨ cong (fmap GG (η (Y , tt)) ∘_) (nat (fmap FF f)) ⟩
-        fmap GG (η (Y , tt)) ∘ η (F Y , tt) ∘ fmap FF (fmap FF f)
-          ≡⟨ cong (_∘ fmap FF (fmap FF f)) (nat (η (Y , tt))) ⟩
-        η (G Y , tt) ∘ fmap FF (η (Y , tt)) ∘ fmap FF (fmap FF f)
+        F₁ GG (F₁ GG f) ∘ η (G X , tt) ∘ F₁ FF (η (X , tt))
+          ≡⟨ cong (F₁ GG (F₁ GG f) ∘_) (sym (nat (η (X , tt)))) ⟩
+        F₁ GG (F₁ GG f) ∘ F₁ GG (η (X , tt)) ∘ η (F X , tt)
+          ≡⟨ cong (_∘ η (F X , tt)) (sym (F-∘ GG (F₁ GG f) (η (X , tt)))) ⟩
+        F₁ GG (F₁ GG f ∘ η (X , tt)) ∘ η (F X , tt)
+          ≡⟨ cong (_∘ η (F X , tt)) (cong (F₁ GG) (nat f)) ⟩
+        F₁ GG (η (Y , tt) ∘ F₁ FF f) ∘ η (F X , tt)
+          ≡⟨ cong (_∘ η (F X , tt)) (F-∘ GG (η (Y , tt)) (F₁ FF f)) ⟩
+        F₁ GG (η (Y , tt)) ∘ F₁ GG (F₁ FF f) ∘ η (F X , tt)
+          ≡⟨ cong (F₁ GG (η (Y , tt)) ∘_) (nat (F₁ FF f)) ⟩
+        F₁ GG (η (Y , tt)) ∘ η (F Y , tt) ∘ F₁ FF (F₁ FF f)
+          ≡⟨ cong (_∘ F₁ FF (F₁ FF f)) (nat (η (Y , tt))) ⟩
+        η (G Y , tt) ∘ F₁ FF (η (Y , tt)) ∘ F₁ FF (F₁ FF f)
           ∎
 
-  BBB .fmapid {F , _ , FF} = Nat≡ (λ i (X , _) (x , ffx) → x , fmapid FF i ffx)
+  BBB .F-id {F , _ , FF} = Nat≡ (λ i (X , _) (x , ffx) → x , F-id FF i ffx)
 
-  BBB .fmap∘ {F , _ , FF} {G , _ , GG} {H , _ , HH}
+  BBB .F-∘ {F , _ , FF} {G , _ , GG} {H , _ , HH}
     record { η = η₁ ; nat = nat₁ }
     record { η = η₂ ; nat = nat₂ }
     = Nat≡ (λ i (X , _) (x , ffx) → x , aux i ffx)
     where
       open Cat ⟦ * ⟧Cat
       aux : {X : Set}
-        → η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ fmap FF(η₁ (X , tt) ∘ η₂ (X , tt))
-        ≡ η₁ (H X , tt) ∘ fmap GG (η₁ (X , tt)) ∘ η₂ (G X , tt) ∘ fmap FF (η₂ (X , tt))
+        → η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ F₁ FF(η₁ (X , tt) ∘ η₂ (X , tt))
+        ≡ η₁ (H X , tt) ∘ F₁ GG (η₁ (X , tt)) ∘ η₂ (G X , tt) ∘ F₁ FF (η₂ (X , tt))
       aux {X} =
-        η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ fmap FF (η₁ (X , tt) ∘ η₂ (X , tt))
-          ≡⟨ cong ((η₁ (H X , tt) ∘ η₂ (H X , tt)) ∘_) (fmap∘ FF (η₁ (X , tt)) (η₂ (X , tt))) ⟩
-        η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ fmap FF (η₁ (X , tt)) ∘ fmap FF (η₂ (X , tt))
-          ≡⟨ cong (η₁ (H X , tt) ∘_) (cong (_∘ fmap FF (η₂ (X , tt))) (sym (nat₂ (η₁ (X , tt))))) ⟩
-        η₁ (H X , tt) ∘ fmap GG (η₁ (X , tt)) ∘ η₂ (G X , tt) ∘ fmap FF (η₂ (X , tt)) ∎
+        η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ F₁ FF (η₁ (X , tt) ∘ η₂ (X , tt))
+          ≡⟨ cong ((η₁ (H X , tt) ∘ η₂ (H X , tt)) ∘_) (F-∘ FF (η₁ (X , tt)) (η₂ (X , tt))) ⟩
+        η₁ (H X , tt) ∘ η₂ (H X , tt) ∘ F₁ FF (η₁ (X , tt)) ∘ F₁ FF (η₂ (X , tt))
+          ≡⟨ cong (η₁ (H X , tt) ∘_) (cong (_∘ F₁ FF (η₂ (X , tt))) (sym (nat₂ (η₁ (X , tt))))) ⟩
+        η₁ (H X , tt) ∘ F₁ GG (η₁ (X , tt)) ∘ η₂ (G X , tt) ∘ F₁ FF (η₂ (X , tt)) ∎
 
 L : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T
 L F X = ⊤ ⊎ (X × F X)
@@ -88,64 +88,21 @@ FuncL = LL , LLL
   where
   open Func
   LL : (F : Set → Set) → ⟦ * ⇒ * ⟧Func F → ⟦ * ⇒ * ⟧Func (L F)
-  LL F (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ }) = _ , record
-    { fmap = λ{ f (inl tt) → inl tt ; f (inr (x , fx)) → inr (f x , fmap f fx) }
-    ; fmapid = λ{ i (inl tt) → inl tt ; i (inr (x , fx)) → inr (x , fmapid i fx) }
-    ; fmap∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr (x , fx)) → inr (f (g x) , fmap∘ f g i fx) }
+  LL F (_ , record { F₁ = F₁ ; F-id = F-id ; F-∘ = F-∘ }) = _ , record
+    { F₁ = λ{ f (inl tt) → inl tt ; f (inr (x , fx)) → inr (f x , F₁ f fx) }
+    ; F-id = λ{ i (inl tt) → inl tt ; i (inr (x , fx)) → inr (x , F-id i fx) }
+    ; F-∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr (x , fx)) → inr (f (g x) , F-∘ f g i fx) }
     }
 
   LLL : Func ⟦ * ⇒ * ⟧Cat ⟦ * ⇒ * ⟧Cat _
-  LLL .fmap {F , _ , FF} {G , _ , GG} record { η = η ; nat = nat } = record
+  LLL .F₁ {F , _ , FF} {G , _ , GG} record { η = η ; nat = nat } = record
     { η = λ{ (X , _) (inl tt) → inl tt ; (X , _) (inr (x , fx)) → inr (x , η (X , tt) fx) }
     ; nat = λ{ f i (inl tt) → inl tt ; f i (inr (x , fx)) → inr (f x , nat f i fx) }
     }
     
-  LLL .fmapid {F , _ , FF} = Nat≡ λ{ i (X , _) (inl tt) → inl tt ; i (X , _) (inr (x , fx)) → inr (x , fx) }
+  LLL .F-id {F , _ , FF} = Nat≡ λ{ i (X , _) (inl tt) → inl tt ; i (X , _) (inr (x , fx)) → inr (x , fx) }
   
-  LLL .fmap∘ {F , _ , FF} {G , _ , GG} {H , _ , HH}
+  LLL .F-∘ {F , _ , FF} {G , _ , GG} {H , _ , HH}
     record { η = η₁ ; nat = nat₁ }
     record { η = η₂ ; nat = nat₂ }
     = Nat≡ λ{ i (X , _) (inl tt) → inl tt ; i (X , _) (inr (x , fx)) → inr (x , η₁ (X , tt) (η₂ (X , tt) fx)) }
-
-open import Data.Maybe
-open import Function.Base
-
-Maybe₁ : ∀ {X Y} → (X → Y) → Maybe X → Maybe Y
-Maybe₁ f (just x) = just (f x)
-Maybe₁ f nothing = nothing
-
-Maybeid : ∀ {X} → Maybe₁ {X} (λ x → x) ≡ λ x → x
-Maybeid i (just x) = just x
-Maybeid i nothing = nothing
-
-Maybe∘ : ∀ {X Y Z} (f : Y → Z) (g : X → Y)
-  → Maybe₁ (f ∘ g) ≡ Maybe₁ f ∘ Maybe₁ g
-Maybe∘ f g i (just x) = just (f (g x))
-Maybe∘ f g i nothing = nothing
-
-MaybeT : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T
-MaybeT M X = M (Maybe X)
-
-{-
-MaybeT-HFunc : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧Func MaybeT
-MaybeT-HFunc = MTMT , MTMTMT
-  where
-  MTMT : (M : Set → Set) → ⟦ * ⇒ * ⟧Func M → ⟦ * ⇒ * ⟧Func (MaybeT M)
-  MTMT M (_ , record { fmap = fmap ; fmapid = fmapid ; fmap∘ = fmap∘ })
-    = _ , record
-    { fmap = fmap ∘ Maybe₁
-    ; fmapid = cong fmap Maybeid ∙ fmapid
-    ; fmap∘ = λ f g → cong fmap (Maybe∘ f g) ∙ fmap∘ (Maybe₁ f) (Maybe₁ g)
-    }
-
-  open Func
-
-  MTMTMT : Func ⟦ * ⇒ * ⟧Cat ⟦ * ⇒ * ⟧Cat _
-  MTMTMT .fmap record { η = η ; nat = nat } = record
-    { η = λ (X , _) x → η (Maybe X , _) x
-    ; nat = λ f i x → {!!}
-    }
-  
-  MTMTMT .fmapid = {!!}
-  MTMTMT .fmap∘ = {!!}
--}

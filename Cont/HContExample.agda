@@ -20,11 +20,11 @@ MaybeHCont = lam (ne (record { S = S ; P = P ; R = R }))
   S : Set
   S = Bool
 
-  P : S → Var (∙ ▹ *) A → Set
+  P : S → Var (• ▷ *) A → Set
   P false vz = ⊥
   P true vz = ⊤
 
-  R : (s : S) (x : Var (∙ ▹ *) A) → P s x → Sp (∙ ▹ *) A *
+  R : (s : S) (x : Var (• ▷ *) A) → P s x → Sp (• ▷ *) A *
   R true vz tt = ε
 
 ListHCont : HCont (* ⇒ *)
@@ -33,10 +33,10 @@ ListHCont = lam (ne (record { S = S ; P = P ; R = R }))
   S : Set
   S = ℕ
 
-  P : S → Var (∙ ▹ *) A → Set
+  P : S → Var (• ▷ *) A → Set
   P n vz = Fin n
 
-  R : (s : S) (x : Var (∙ ▹ *) A) → P s x → Sp (∙ ▹ *) A *
+  R : (s : S) (x : Var (• ▷ *) A) → P s x → Sp (• ▷ *) A *
   R n vz i = ε
 
 L : (Set → Set) → (Set → Set)
@@ -45,29 +45,29 @@ L F X = ⊤ ⊎ X × F X
 L-HCont : HCont ((* ⇒ *) ⇒ * ⇒ *)
 L-HCont = lam (lam (ne (record { S = S ; P = P ; R = R })))
   where
-  X-Nf : Nf (∙ ▹ * ⇒ * ▹ *) *
+  X-Nf : Nf (• ▷ * ⇒ * ▷ *) *
   X-Nf = ne (record { S = S ; P = P ; R = R })
     where
     S : Set
     S = ⊤
 
-    P : S → Var (∙ ▹ * ⇒ * ▹ *) A → Set
+    P : S → Var (• ▷ * ⇒ * ▷ *) A → Set
     P tt vz = ⊤
     P tt (vs _) = ⊥
 
-    R : (s : S) (x : Var (∙ ▹ * ⇒ * ▹ *) A) →
-      P s x → Sp (∙ ▹ * ⇒ * ▹ *) A *
+    R : (s : S) (x : Var (• ▷ * ⇒ * ▷ *) A) →
+      P s x → Sp (• ▷ * ⇒ * ▷ *) A *
     R tt vz tt = ε
     
   S : Set
   S = Bool
 
-  P : S → Var (∙ ▹ * ⇒ * ▹ *) A → Set
+  P : S → Var (• ▷ * ⇒ * ▷ *) A → Set
   P false x = ⊥
   P true x = ⊤
 
-  R : (s : S) (x : Var (∙ ▹ * ⇒ * ▹ *) A) →
-    P s x → Sp (∙ ▹ * ⇒ * ▹ *) A *
+  R : (s : S) (x : Var (• ▷ * ⇒ * ▷ *) A) →
+    P s x → Sp (• ▷ * ⇒ * ▷ *) A *
   R true vz tt = ε
   R true (vs vz) tt = X-Nf , ε
 
@@ -78,7 +78,7 @@ H-HCont : HCont ((* ⇒ *) ⇒ * ⇒ *)
 H-HCont = lam (lam (ne (record { S = S ; P = P ; R = R })))
   where
   Γ₀ : Con
-  Γ₀ = ∙ ▹ * ⇒ * ▹ *
+  Γ₀ = • ▷ * ⇒ * ▷ *
 
   X-Nf : Nf Γ₀ *
   X-Nf = ne (record { S = S ; P = P ; R = R })

@@ -54,19 +54,19 @@ record 2⟦_⟧ (C : 2Cont) (F : 1Cont) (X : Set) : Set where
   open 2Cont C
   field
     s : S
-    p₀ : (p : P₀ s .Cont.S) → ⟦ F ⟧ (2⟦ P₀ s .Cont.P p ⟧ F X)
-    p₁ : P₁ s → X
+    k₀ : (p : P₀ s .Cont.S) → ⟦ F ⟧ (2⟦ P₀ s .Cont.P p ⟧ F X)
+    k₁ : P₁ s → X
 
 {-# TERMINATING #-}
 2⟦_⟧₁ : (C : 2Cont)
   → {F G : 1Cont} → (∀ X → ⟦ F ⟧ X → ⟦ G ⟧ X)
   → {X Y : Set} → (X → Y)
   → 2⟦ C ⟧ F X → 2⟦ C ⟧ G Y
-2⟦ C ⟧₁ {F} {G} α {X} {Y} f record { s = s ; p₀ = p₀ ; p₁ = p₁ } =
+2⟦ C ⟧₁ {F} {G} α {X} {Y} f record { s = s ; k₀ = k₀ ; k₁ = k₁ } =
   record
   { s = s
-  ; p₀ = λ p → α (2⟦ (P₀ C s) .P p ⟧ G Y) (⟦ F ⟧₁ (2⟦ (P₀ C s) .P p ⟧₁ α f) (p₀ p))
-  ; p₁ = f ∘' p₁
+  ; k₀ = λ p → α (2⟦ (P₀ C s) .P p ⟧ G Y) (⟦ F ⟧₁ (2⟦ (P₀ C s) .P p ⟧₁ α f) (k₀ p))
+  ; k₁ = f ∘' k₁
   }
   where
     open 2Cont
@@ -77,8 +77,8 @@ record 2⟦_⟧ (C : 2Cont) (F : 1Cont) (X : Set) : Set where
   → (F : 1Cont) (X : Set)
   → 2⟦ C ⟧ F X → 2⟦ D ⟧ F X
 2⟦ record { f = f ; g₀ = g₀ ; g₁ = g₁ } ⟧Hom F X
-  record { s = s ; p₀ = p₀ ; p₁ = p₁ } = record
+  record { s = s ; k₀ = k₀ ; k₁ = k₁ } = record
   { s = f s
-  ; p₀ = λ p → ⟦ F ⟧₁ (2⟦ g₀ s .ContHom.g p ⟧Hom F X) (p₀ (g₀ s .ContHom.f p))
-  ; p₁ = p₁ ∘' g₁ s
+  ; k₀ = λ p → ⟦ F ⟧₁ (2⟦ g₀ s .ContHom.g p ⟧Hom F X) (k₀ (g₀ s .ContHom.f p))
+  ; k₁ = k₁ ∘' g₁ s
   }

@@ -29,12 +29,16 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
   open Cont SP
   field
     s : S
-    p : P s → X
+    k : P s → X
 
 ⟦_⟧₁ : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
-⟦ SP ⟧₁ f sp = sp .⟦_⟧.s , (f ∘ sp .⟦_⟧.p)
+⟦ SP ⟧₁ f sk = sk .s , (f ∘ sk .k)
+  where open ⟦_⟧
 {-# INLINE ⟦_⟧₁ #-}
+
+⟦_⟧₁' : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
+⟦ SP ⟧₁' f (s , k) = s , (f ∘ k)
 
 ⟦_⟧Hom : {SP TQ : Cont} (fg : ContHom SP TQ)
   → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-⟦ f ◃ g ⟧Hom X (s , p) = f s , (p ∘ g s)
+⟦ f ◃ g ⟧Hom X (s , k) = f s , (k ∘ g s)

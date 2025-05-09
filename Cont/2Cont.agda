@@ -48,8 +48,8 @@ record ⟦_⟧ (C : 2Cont) (F : Set → Set) (X : Set) : Set where
   open 2Cont C
   field
     s : S
-    k : (p₀ : P₀ s) → F (⟦ R₀ s p₀ ⟧ F X)
-    l : P₁ s → X
+    k₀ : (p₀ : P₀ s) → F (⟦ R₀ s p₀ ⟧ F X)
+    k₁ : P₁ s → X
 
 open 2Cont
 {-# TERMINATING #-}
@@ -57,15 +57,15 @@ open 2Cont
   → {F G : Set → Set} {F₁ : ∀ {X Y} → (X → Y) → F X → F Y} → (∀ X → F X → G X)
   → {X Y : Set} → (X → Y)
   → ⟦ C ⟧ F X → ⟦ C ⟧ G Y
-⟦ C ⟧₁ {F} {G} {F₁} α {X} {Y} f record { s = s ; k = k ; l = l } = record
+⟦ C ⟧₁ {F} {G} {F₁} α {X} {Y} f record { s = s ; k₀ = k₀ ; k₁ = k₁ } = record
   { s = s
-  ; k = λ p₀ → α (⟦ C .R₀ s p₀ ⟧ G Y) (F₁ (⟦ C .R₀ s p₀ ⟧₁ {F₁ = F₁} α f) (k p₀))
-  ; l = f ∘ l
+  ; k₀ = λ p₀ → α (⟦ C .R₀ s p₀ ⟧ G Y) (F₁ (⟦ C .R₀ s p₀ ⟧₁ {F₁ = F₁} α f) (k₀ p₀))
+  ; k₁ = f ∘ k₁
   }
 
 {-# TERMINATING #-}
 ⟦_⟧Hom : {C D : 2Cont} (δ : 2ContHom C D) →
   (F : Set → Set) (F₁ : ∀ {X Y} → (X → Y) → F X → F Y) (X : Set) → ⟦ C ⟧ F X → ⟦ D ⟧ F X
 ⟦ record { f = f ; g₀ = g₀ ; h₀ = h₀ ; g₁ = g₁ } ⟧Hom F F₁ X
-  record { s = s ; k = k ; l = l } =
-  record { s = f s ; k = λ p₀ → F₁ (⟦ h₀ s p₀ ⟧Hom F F₁ X) (k (g₀ s p₀)) ; l = l ∘ g₁ s }
+  record { s = s ; k₀ = k₀ ; k₁ = k₁ } =
+  record { s = f s ; k₀ = λ p₀ → F₁ (⟦ h₀ s p₀ ⟧Hom F F₁ X) (k₀ (g₀ s p₀)) ; k₁ = k₁ ∘ g₁ s }
