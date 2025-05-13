@@ -59,13 +59,13 @@ record 2⟦_⟧ (C : 2Cont) (F : 1Cont) (X : Set) : Set where
 
 {-# TERMINATING #-}
 2⟦_⟧₁ : (C : 2Cont)
-  → {F G : 1Cont} → (∀ X → ⟦ F ⟧ X → ⟦ G ⟧ X)
+  → {F G : 1Cont} → 1ContHom F G
   → {X Y : Set} → (X → Y)
   → 2⟦ C ⟧ F X → 2⟦ C ⟧ G Y
 2⟦ C ⟧₁ {F} {G} α {X} {Y} f record { s = s ; k₀ = k₀ ; k₁ = k₁ } =
   record
   { s = s
-  ; k₀ = λ p → α (2⟦ (P₀ C s) .P p ⟧ G Y) (⟦ F ⟧₁ (2⟦ (P₀ C s) .P p ⟧₁ α f) (k₀ p))
+  ; k₀ = λ p → ⟦ α ⟧Hom (2⟦ (P₀ C s) .P p ⟧ G Y) (⟦ F ⟧₁ (2⟦ (P₀ C s) .P p ⟧₁ α f) (k₀ p))
   ; k₁ = f ∘' k₁
   }
   where

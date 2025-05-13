@@ -56,12 +56,12 @@ private variable A B C : Ty
 
 {- Higher Functoriality -}
 
-⟦_⟧Func : (A : Ty) → ⟦ A ⟧T → Type
-⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧Func)
+⟦_⟧T₁ : (A : Ty) → ⟦ A ⟧T → Type
+⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧T₁)
 
-⟦ * ⟧Func X = ⊤
-⟦ A ⇒ B ⟧Func H =
-  Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧Func F → ⟦ B ⟧Func (H F)) ]
+⟦ * ⟧T₁ X = ⊤
+⟦ A ⇒ B ⟧T₁ H =
+  Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧T₁ F → ⟦ B ⟧T₁ (H F)) ]
   Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
 
 ⟦ * ⟧Cat = record
@@ -88,7 +88,7 @@ private variable A B C : Ty
     open Cat ⟦ B ⟧Cat
 
 HFunc : Ty → Type
-HFunc A = Σ[ F ∈ ⟦ A ⟧T ] ⟦ A ⟧Func F
+HFunc A = Σ ⟦ A ⟧T ⟦ A ⟧T₁
 
 {- Syntax of Contexts -}
 
@@ -187,7 +187,8 @@ MaybeHCont = lam (ne (record { S = S ; P = P ; R = R }))
 eq : (ts : Sp Γ * *) (γ : ⟦ Γ ⟧C) (X : Type) → ⟦ ts ⟧sp γ X ≡ X
 eq ε γ X = refl
 
-1⟦_⟧ : (c : HCont (* ⇒ *)) → ⟦ * ⇒ * ⟧Func ⟦ c ⟧
+{-
+1⟦_⟧ : (c : HCont (* ⇒ *)) → ⟦ * ⇒ * ⟧T₁ ⟦ c ⟧
 1⟦ lam (ne record { S = S ; P = P ; R = R }) ⟧ =
   (λ X _ → tt) , record
   { F₁ = λ{ {(X , tt)} {(Y , tt)} f (s , k) →
@@ -195,8 +196,8 @@ eq ε γ X = refl
   ; F-id = λ{ {(X , tt)} i (s , k) → s , λ x p → {!!} }
   ; F-∘ = {!!}
   }
-
-2⟦_⟧ : (hc : HCont ((* ⇒ *) ⇒ (* ⇒ *))) → ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧Func ⟦ hc ⟧
+  
+2⟦_⟧ : (hc : HCont ((* ⇒ *) ⇒ (* ⇒ *))) → ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T₁ ⟦ hc ⟧
 2⟦ lam (lam (ne record { S = S ; P = P ; R = R })) ⟧ =
   (λ{ H (_ , record { F₁ = F₁ ; F-id = F-id ; F-∘ = F-∘ })
   → _ , record { F₁ = {!!} ; F-id = {!!} ; F-∘ = {!!} }}
@@ -205,20 +206,25 @@ eq ε γ X = refl
   ; F-id = {!!}
   ; F-∘ = {!!}
   }
+-}
 
-{-
-⟦_⟧nf₁ : (t : Nf Γ A) (γ : ⟦ Γ ⟧C) → ⟦ A ⟧Func (⟦ t ⟧nf γ)
+⟦_⟧C₁ : (Γ : Con) (γ : ⟦ Γ ⟧C) → Set
+⟦ • ⟧C₁ tt = ⊤
+⟦ Γ ▷ A ⟧C₁ (γ , a) = ⟦ Γ ⟧C₁ γ × ⟦ A ⟧T₁ a
 
-⟦ lam t ⟧nf₁ γ = (λ F x → ⟦ t ⟧nf₁ (γ , F)) ,
-  record
-  { F₁ = λ {(X , XX)} {(Y , YY)} α → {!!}
+⟦_⟧nf₁ : (t : Nf Γ A) (γ : ⟦ Γ ⟧C) (γ₁ : ⟦ Γ ⟧C₁ γ) → ⟦ A ⟧T₁ (⟦ t ⟧nf γ)
+⟦ lam t ⟧nf₁ γ γ₁ = (λ a a₁ → ⟦ t ⟧nf₁ (γ , a) (γ₁ , a₁)) , record
+  { F₁ = {!!}
   ; F-id = {!!}
   ; F-∘ = {!!}
   }
   where open Cat
-⟦ ne x ⟧nf₁ γ = {!!}
+⟦ ne x ⟧nf₁ γ γ₁ = tt
+
+⟦_⟧ne₁ : (n : Ne Γ *) (x : Var Γ A) → Func {!!} {!!} {!!}
+⟦_⟧ne₁ {Γ} record { S = S ; P = P ; R = R } x = record
+  { F₁ = {!!} ; F-id = {!!} ; F-∘ = {!!} }
 
 
-⟦_⟧₁ : (x : HCont A) → ⟦ A ⟧Func ⟦ x ⟧
-⟦ x ⟧₁ = ⟦ x ⟧nf₁ tt
--}
+⟦_⟧₁ : HCont A → HFunc A
+⟦ hc ⟧₁ = ⟦ hc ⟧ , ⟦ hc ⟧nf₁ tt tt

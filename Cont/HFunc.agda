@@ -5,7 +5,7 @@ module Cont.HFunc where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit renaming (Unit to ⊤)
 
-{- Category, Functor, Natural Transformation -}
+{- Categories, Functors, Natural Transformations -}
 
 record Cat (Obj : Type₁) : Type₂ where
   infixr 9 _∘_
@@ -47,14 +47,12 @@ infixr 20 _⇒_
 data Ty : Type where
   * : Ty
   _⇒_ : Ty → Ty → Ty
-
-private variable A B C : Ty
+  
+{- Semantics -}
 
 ⟦_⟧T : Ty → Type₁
 ⟦ * ⟧T = Type
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
-
-{- Semantics -}
 
 ⟦_⟧Func : (A : Ty) → ⟦ A ⟧T → Type₁
 
@@ -66,7 +64,7 @@ private variable A B C : Ty
   Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
 
 ⟦ * ⟧Cat = record
-  { Hom = λ (X , _) (Y , _) → Lift (X → Y)
+  { Hom = λ (X , lift tt) (Y , lift tt) → Lift (X → Y)
   ; id = lift (λ x → x)
   ; _∘_ = λ{ (lift f) (lift g) → lift (λ x → f (g x)) }
   ; idl = λ f → refl
@@ -92,4 +90,3 @@ private variable A B C : Ty
   where
     open Cat ⟦ B ⟧Cat
     open Nat
-

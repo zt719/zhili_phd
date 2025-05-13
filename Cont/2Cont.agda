@@ -1,4 +1,4 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --cubical-compatible #-}
 
 module Cont.2Cont where
 
