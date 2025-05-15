@@ -21,14 +21,15 @@ record 2Cont where
     P₀ : S → Cont 2CONT
     P₁ : S → Set    
 
-record 2ContHom C D where
+record 2ContHom SPP TQQ where
   inductive
   eta-equality
-  open 2Cont
+  open 2Cont SPP
+  open 2Cont TQQ renaming (S to T; P₀ to Q₀; P₁ to Q₁)
   field
-    f : C .S → D .S
-    g₀ : (s : C .S) → ContHom 2CONT (D .P₀ (f s)) (C .P₀ s)
-    g₁ : (s : C .S) → D .P₁ (f s) → C .P₁ s
+    f : S → T
+    g₀ : (s : S) → ContHom 2CONT (Q₀ (f s)) (P₀ s)
+    g₁ : (s : S) → Q₁ (f s) → P₁ s
 
 {-# TERMINATING #-}
 2CONT = record

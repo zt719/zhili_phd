@@ -11,25 +11,10 @@ private
     Γ Δ : Con
     x y : Var Γ A
 
-𝟙 : Nf ∙ *
-𝟙 = ne (record { S = S ; P = P ; R = R })
-  where
-  S : Set
-  S = ⊤
-
-  P : S → Var Γ A → Set
-  P tt x = ⊤
-
-  R : (s : S) (x : Var Γ A) → P s x → Sp Γ A *
-  R tt vz tt = {!!}
-  R tt (vs vz) tt = {!!}
-  R tt (vs (vs x)) tt = {!!}
-
-
 {- Weakening -}
 
 _-_ : (Γ : Con) → Var Γ A → Con
-∙ - ()
+• - ()
 (Γ ▹ A) - vz = Γ
 (Γ ▹ A) - (vs x) = (Γ - x) ▹ A
 
@@ -134,9 +119,12 @@ ne {Γ} record { S = S ; P = P ; R = R } [ x := u ] =
   P' s y = P s (wkv x y)
 
   R' : (s : S) (y : Var (Γ - x) A) → P' s y → Sp (Γ - x) A *
+  R' = {!!}
+  
+  {-
   R' s y p with eq x (wkv x y)
   ... | b = {!!}
-
+  -}
 ε < x := u > = ε
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
 

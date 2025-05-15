@@ -1,39 +1,38 @@
-{-# OPTIONS --cubical #-}
+module Cont.HContHFunc2 where
 
-module Cont.HContHFunc1 where
+open import Data.Empty
+open import Data.Unit
+open import Data.Product
 
-open import Cubical.Foundations.Prelude
-open import Cubical.Data.Empty
-open import Cubical.Data.Unit renaming (Unit to ⊤)
-open import Cubical.Data.Sigma
+open import Level
 
 {- Syntax -}
 
 infixr 20 _⇒_
-data Ty : Type where
+data Ty : Set where
   * : Ty
   _⇒_ : Ty → Ty → Ty
 
 private variable A B C : Ty
 
 infixl 5 _▹_
-data Con : Type where
+data Con : Set where
   •   : Con
   _▹_ : Con → Ty → Con
 
 private variable Γ Δ : Con
 
-data Var : Con → Ty → Type where
+data Var : Con → Ty → Set where
   vz : Var (Γ ▹ A) A
   vs : Var Γ A → Var (Γ ▹ B) A
 
 private variable x y : Var Γ A
 
-data Nf : Con → Ty → Type₁
+data Nf : Con → Ty → Set₁
 
-record Ne (Γ : Con) (B : Ty) : Type₁
+record Ne (Γ : Con) (B : Ty) : Set₁
 
-data Sp : Con → Ty → Ty → Type₁
+data Sp : Con → Ty → Ty → Set₁
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
@@ -44,8 +43,8 @@ private variable t u : Nf Γ A
 record Ne Γ B where
   inductive
   field
-    S : Type
-    P : S → Var Γ A → Type
+    S : Set
+    P : S → Var Γ A → Set
     R : (s : S) (x : Var Γ A) → P s x → Sp Γ A B
 
 private variable m n : Ne Γ B
@@ -56,21 +55,21 @@ data Sp where
 
 private variable ts us : Sp Γ A B
 
-HCont : Ty → Type₁
+HCont : Ty → Set₁
 HCont A = Nf • A
 
 {- Morphisms -}
 
-record HContHom (H J : HCont A) : Type₁ where
+record HContHom (H J : HCont A) : Set₁ where
 
 {- Semantics -}
 
-⟦_⟧T : Ty → Type₁
-⟦ * ⟧T = Type
+⟦_⟧T : Ty → Set₁
+⟦ * ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
-⟦_⟧C : Con → Type₁
-⟦ • ⟧C = Lift ⊤
+⟦_⟧C : Con → Set₁
+⟦ • ⟧C = Lift (suc zero) ⊤
 ⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
 ⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
@@ -78,9 +77,7 @@ record HContHom (H J : HCont A) : Type₁ where
 ⟦ vs x ⟧v (γ , a) = ⟦ x ⟧v γ
 
 ⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
-
-⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Type
-
+⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
 ⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
 
 ⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
@@ -195,20 +192,17 @@ _◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 
 napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
 
-lam t [ x := u ] = lam (t [ vs x := wkNf vz u ])
-ne {Γ} record { S = S ; P = P ; R = R } [ x := u ] =
+(lam t) [ x := u ] = lam (t [ vs x := wkNf vz u ])
+(ne {Γ} record { S = S ; P = P ; R = R }) [ x := u ] =
   ne (record { S = S ; P = P' ; R = R' })
   where
   P' : S → Var (Γ - x) A → Set
   P' s y = P s (wkv x y)
 
   R' : (s : S) (y : Var (Γ - x) A) → P' s y → Sp (Γ - x) A *
-  R' = {!!}
-  
-  {-
   R' s y p with eq x (wkv x y)
   ... | b = {!!}
-  -}
+
 ε < x := u > = ε
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
 
@@ -217,7 +211,46 @@ t ◇ (u , us) = napp t u ◇ us
 
 napp (lam t) u = t [ vz := u ]
 
+{- Categories, Functors, Natural Transformation -}
 
-⟦_⟧Func : (A : Ty) → HCont A → Type₁
-⟦ * ⟧Func X = Lift ⊤
-⟦ A ⇒ B ⟧Func H = (F : HCont A) → ⟦ A ⟧Func F → ⟦ B ⟧Func (napp H F)
+record Cat (Obj : Set₁) : Set₂ where
+  infixr 9 _∘_
+  field
+    Hom : Obj → Obj → Set₁
+    id : ∀ {X} → Hom X X
+    _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
+
+record Func {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B) (F : A → B) : Set₁ where
+  open Cat
+  field
+    F₁ : ∀ {X Y} → Hom ℂ X Y → Hom 𝔻 (F X) (F Y)
+
+record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
+  (F G : A → B) (FF : Func ℂ 𝔻 F) (GG : Func ℂ 𝔻 G) : Set₁ where
+  open Cat
+  open Func
+  field
+    η : ∀ X → Hom 𝔻 (F X) (G X)
+
+{- Functoriality ? -}
+
+⟦_⟧Func : (A : Ty) → HCont A → Set₁
+⟦_⟧Cat : (A : Ty) → Cat (Σ (HCont A) ⟦ A ⟧Func)
+
+⟦ * ⟧Func X = Lift (suc zero) ⊤
+⟦ A ⇒ B ⟧Func H =
+  Σ[ HH ∈ ((F : HCont A) → ⟦ A ⟧Func F → ⟦ B ⟧Func (napp H F)) ]
+  Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → napp H F , HH F FF)
+
+⟦ * ⟧Cat = record
+  { Hom = λ (X , lift tt) (Y , lift tt) → HContHom X Y
+  ; id = {!!}
+  ; _∘_ = {!!}
+  }
+  
+⟦ A ⇒ B ⟧Cat = record
+  { Hom = λ (F , FF , FFF) (G , GG , GGG)
+    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → napp F X , FF X XX) (λ (X , XX) → (napp G X) , GG X XX) FFF GGG
+  ; id = {!!}
+  ; _∘_ = {!!}
+  }

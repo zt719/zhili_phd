@@ -9,11 +9,8 @@ open import Data.Product
 
 open import Function.Base
 
-record 2Cont : Set
-record 2ContHom (C D : 2Cont) : Set
-
 {-# NO_POSITIVITY_CHECK #-}
-record 2Cont where
+record 2Cont : Set where
   inductive
   field
     S : Set
@@ -21,10 +18,10 @@ record 2Cont where
     R₀ : (s : S) → P₀ s → 2Cont
     P₁ : S → Set
 
-record 2ContHom C D where
+record 2ContHom (C D : 2Cont) : Set where
   inductive
   eta-equality
-  open 2Cont
+  open 2Cont 
   field
     f : C .S → D .S
     g₀ : (s : C .S) → D .P₀ (f s) → C .P₀ s
@@ -33,7 +30,6 @@ record 2ContHom C D where
 
 module _ where
   open 2ContHom
-  
   {-# TERMINATING #-}
   2ContHomComp : ∀ {C D E} → 2ContHom D E → 2ContHom C D → 2ContHom C E
   2ContHomComp δ γ .f = δ .f ∘ γ .f
