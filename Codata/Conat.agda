@@ -3,12 +3,21 @@
 module Codata.Conat where
 
 open import Data.Maybe
+open import Data.Sum
 
 record ℕ∞ : Set where
   coinductive
   field
     pred∞ : Maybe ℕ∞
-open ℕ∞    
+open ℕ∞
+
+co-recℕ∞ : (W : Set)
+  → (W → ℕ∞ ⊎ Maybe W)
+  → W → ℕ∞
+pred∞ (co-recℕ∞ W p x) with p x
+... | inj₁ n = pred∞ n
+... | inj₂ (just x) = just (co-recℕ∞ W p x)
+... | inj₂ nothing = nothing
 
 zero∞ : ℕ∞
 pred∞ zero∞ = nothing

@@ -3,9 +3,30 @@
 module Cont.2Cont1 where
 
 open import Cont.CCont
-open import Cont.1Cont
-
 open Cat
+
+SET : Cat
+SET = record
+  { Obj = Set
+  ; Hom = λ X Y → X → Y
+  ; id = λ x → x
+  ; _∘_ = λ f g x → f (g x)
+  }
+
+1Cont : Set
+1Cont = Cont SET
+
+1ContHom : 1Cont → 1Cont → Set
+1ContHom = ContHom SET
+
+1⟦_⟧ : 1Cont → Set → Set
+1⟦_⟧ = ⟦_⟧
+
+1⟦_⟧₁ : (SP : 1Cont) → {X Y : Set} → (X → Y) → 1⟦ SP ⟧ X → 1⟦ SP ⟧ Y
+1⟦_⟧₁ = ⟦_⟧₁
+
+1⟦_⟧Hom : ∀ {SP TQ} → 1ContHom SP TQ → ∀ X → 1⟦ SP ⟧ X → 1⟦ TQ ⟧ X
+1⟦_⟧Hom = ⟦_⟧Hom
 
 record 2Cont : Set
 
@@ -83,3 +104,4 @@ record 2⟦_⟧ (C : 2Cont) (F : 1Cont) (X : Set) : Set where
   ; k₀ = λ p → ⟦ F ⟧₁ (2⟦ g₀ s .ContHom.g p ⟧Hom F X) (k₀ (g₀ s .ContHom.f p))
   ; k₁ = k₁ ∘' g₁ s
   }
+

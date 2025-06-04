@@ -60,7 +60,29 @@ HCont A = Nf • A
 
 {- Morphisms -}
 
-record HContHom (H J : HCont A) : Set₁ where
+record NfHom (t u : Nf Γ A) : Set₁
+
+record NeHom (SPR TQL : Ne Γ B) : Set₁
+
+data SpHom (ts us : Sp Γ A B) : Set₁
+
+record NfHom {Γ} {A} t u where
+  {- TODO -}
+
+record NeHom {Γ} {B} SPR TQL where
+  open Ne SPR
+  open Ne TQL renaming (S to T; P to Q; R to L)
+  field
+    f : S → T
+    g : (s : S) (x : Var Γ A) → Q (f s) x → P s x
+    h : (s : S) (x : Var Γ A) (q : Q (f s) x)
+      → SpHom (R s x (g s x q)) (L (f s) x q)
+
+data SpHom {Γ} {A} {B} ts us where
+  {- TODO -}
+
+HContHom : HCont A → HCont A → Set₁
+HContHom = NfHom
 
 {- Semantics -}
 
@@ -200,8 +222,7 @@ napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
   P' s y = P s (wkv x y)
 
   R' : (s : S) (y : Var (Γ - x) A) → P' s y → Sp (Γ - x) A *
-  R' s y p with eq x (wkv x y)
-  ... | b = {!!}
+  R' s y p = (R s (wkv x y) p) < x := u >
 
 ε < x := u > = ε
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
