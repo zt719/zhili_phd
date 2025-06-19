@@ -4,6 +4,7 @@ module Codata.Conat where
 
 open import Data.Maybe
 open import Data.Sum
+open import Data.Product
 
 record ℕ∞ : Set where
   coinductive

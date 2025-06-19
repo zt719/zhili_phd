@@ -1,14 +1,17 @@
-module Cont.HContHFunc1 where
+{-# OPTIONS --cubical #-}
 
-open import Data.Empty
-open import Data.Unit
-open import Data.Product
+module Cont.HContCubical where
 
-open import Level
+open import Cubical.Foundations.Prelude hiding (J)
+open import Cubical.Data.Empty
+open import Cubical.Data.Unit renaming (Unit to ⊤)
+open import Cubical.Data.Sigma
 
-open import Cont.HCont
+open import Agda.Primitive
 
 {- Syntax -}
+
+{- Ty & Con & Var -}
 
 infixr 20 _⇒_
 data Ty : Set where
@@ -17,18 +20,20 @@ data Ty : Set where
 
 private variable A B C : Ty
 
-infixl 5 _▷_
+infixl 5 _▹_
 data Con : Set where
   •   : Con
-  _▷_ : Con → Ty → Con
+  _▹_ : Con → Ty → Con
 
 private variable Γ Δ : Con
 
 data Var : Con → Ty → Set where
-  vz : Var (Γ ▷ A) A
-  vs : Var Γ A → Var (Γ ▷ B) A
+  vz : Var (Γ ▹ A) A
+  vs : Var Γ A → Var (Γ ▹ B) A
 
 private variable x y : Var Γ A
+
+{- Object -}
 
 data Nf : Con → Ty → Set₁
 
@@ -37,7 +42,7 @@ record Ne (Γ : Con) (B : Ty) : Set₁
 data Sp : Con → Ty → Ty → Set₁
 
 data Nf where
-  lam : Nf (Γ ▷ A) B → Nf Γ (A ⇒ B)
+  lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
   ne  : Ne Γ * → Nf Γ *
 
 private variable t u w : Nf Γ A
@@ -49,7 +54,7 @@ record Ne Γ B where
     P : Var Γ A → S → Set
     R : (x : Var Γ A) (s : S) → P x s → Sp Γ A B
 
-private variable n m : Ne Γ A
+private variable n m l : Ne Γ A
 
 data Sp where
   ε   : Sp Γ A A
@@ -60,6 +65,7 @@ private variable ts us ws : Sp Γ A B
 HCont : Ty → Set₁
 HCont A = Nf • A
 
+private variable H J K : HCont A
 
 {- Morphism -}
 
@@ -89,9 +95,9 @@ record NeHom {Γ} {B} n m where
 HContHom : HCont A → HCont A → Set₁
 HContHom = NfHom {•}
 
-idNfHom : {t : Nf Γ A} → NfHom t t
-idNeHom : {n : Ne Γ A} → NeHom n n
-idSpHom : {ts : Sp Γ A B} → SpHom ts ts
+idNfHom : NfHom t t
+idNeHom : NeHom n n
+idSpHom : SpHom ts ts
 
 idNfHom {t = lam t} = lam idNfHom
 idNfHom {t = ne x} = ne idNeHom
@@ -101,15 +107,46 @@ idNeHom = record { f = λ s → s ; g = λ x s p → p ; h = λ x s p → idSpHo
 idSpHom {ts = ε} = ε
 idSpHom {ts = t , ts} = idNfHom , idSpHom
 
-idHContHom : {H : HCont A} → HContHom H H
+idHContHom : HContHom H H
 idHContHom = idNfHom
+
+∘NfHom : NfHom u w → NfHom t u → NfHom t w
+∘NeHom : NeHom m l → NeHom n m → NeHom n l
+∘SpHom : SpHom us ws → SpHom ts us → SpHom ts ws
+
+∘NfHom (lam α) (lam β) = lam (∘NfHom α β)
+∘NfHom (ne e) (ne e') = ne (∘NeHom e e')
+
+∘NeHom record { f = f ; g = g ; h = h }
+  record { f = f₁ ; g = g₁ ; h = h₁ }
+  = record
+  { f = λ x → f (f₁ x)
+  ; g = λ x s p → g₁ x s (g x (f₁ s) p)
+  ; h = λ x s p → ∘SpHom (h x (f₁ s) p) (h₁ x s (g x (f₁ s) p))
+  }
+
+∘SpHom ε ε = ε
+∘SpHom (t , ts) (u , us) = ∘NfHom t u , ∘SpHom ts us
+
+∘HContHom : HContHom J K → HContHom H J → HContHom H K
+∘HContHom = ∘NfHom
+
+idl-NfHom : (α : NfHom t u) → ∘NfHom α idNfHom ≡ α
+idl-NeHom : (e : NeHom n m) → ∘NeHom e idNeHom ≡ e
+
+idl-NfHom α i = {!!}
+idl-NeHom = {!!}
+
+idl-HContHom : (α : HContHom H J) → ∘HContHom α idHContHom ≡ α
+idl-HContHom (lam α) i = lam (idl-NfHom α i)
+idl-HContHom (ne x) = {!!}
 
 {- Weakening -}
 
 _-_ : (Γ : Con) → Var Γ A → Con
 • - ()
-(Γ ▷ A) - vz = Γ
-(Γ ▷ A) - (vs x) = (Γ - x) ▷ A
+(Γ ▹ A) - vz = Γ
+(Γ ▹ A) - (vs x) = (Γ - x) ▹ A
 
 wkv : (x : Var Γ A) → Var (Γ - x) B → Var Γ B
 wkv vz y = vs y
@@ -148,8 +185,8 @@ wkNe {Γ} {A} {C} x record { S = S ; P = P ; R = R }
   P' y  s | diff .x y' = P y' s
 
   R' : (y : Var Γ B) (s : S) → P' y s → Sp Γ B C
-  R' y  s p with eq x y
-  R' y  s p | diff .x y' = wkSp x (R y' s p)
+  R' y s p with eq x y
+  R' y s p | diff .x y' = wkSp x (R y' s p)
 
 wkSp x ε = ε
 wkSp x (n , ns) = wkNf x n , wkSp x ns
@@ -197,17 +234,16 @@ nvar {Γ} {B} x =
   R : (y : Var Γ A) (s : S) → P y s → Sp Γ A B
   R y tt p with eq x y
   R .x tt p | same = ε
-  R y tt () | diff .x y'
 
 ne2nf {Γ} {*} x = ne x
 ne2nf {Γ} {A ⇒ C} record { S = S ; P = P ; R = R } =
   lam (ne2nf (record { S = S ; P = P' ; R = R' }))
   where
-  P' : Var (Γ ▷ A) B → S → Set
+  P' : Var (Γ ▹ A) B → S → Set
   P' vz s = ⊥
   P' (vs x) s = P x s
 
-  R' : (x : Var (Γ ▷ A) B) (s : S) → P' x s → Sp (Γ ▷ A) B C
+  R' : (x : Var (Γ ▹ A) B) (s : S) → P' x s → Sp (Γ ▹ A) B C
   R' vz s ()
   R' (vs x) s p = appSp (wkSp vz (R x s p)) (nvar vz)
 
@@ -269,8 +305,8 @@ t $₁ α = napp₁ t α
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
 ⟦_⟧C : Con → Set₁
-⟦ • ⟧C = Lift (suc zero) ⊤
-⟦ Γ ▷ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
+⟦ • ⟧C = Lift ⊤
+⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
 ⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 ⟦ vz ⟧v (γ , a) = a
@@ -279,7 +315,6 @@ t $₁ α = napp₁ t α
 ⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 
 ⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
--- record ⟦_⟧ne (_ : Ne Γ *) (γ : ⟦ Γ ⟧C) : Set
 
 ⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
 
@@ -309,7 +344,7 @@ t $₁ α = napp₁ t α
 {-
 dom : Ty → Con
 dom * = •
-dom (A ⇒ B) = dom B ▷ A
+dom (A ⇒ B) = dom B ▹ A
 
 appDom : ⟦ A ⟧T → ⟦ dom A ⟧C → Set
 appDom {*} a (lift tt) = a
@@ -346,6 +381,7 @@ appDom {A ⇒ B} f (γ , a) = appDom (f a) γ
   = s , λ{ vz p → {!!} ; (vs vz) p → {!!} }
 -}
 -}
+
 {- Categories, Functors, Natural Transformation -}
 
 record Cat (Obj : Set₁) : Set₂ where
@@ -354,11 +390,19 @@ record Cat (Obj : Set₁) : Set₂ where
     Hom : Obj → Obj → Set₁
     id : ∀ {X} → Hom X X
     _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
+    idl : ∀ {X Y} (f : Hom X Y) → id ∘ f ≡ f
+    idr : ∀ {X Y} (f : Hom X Y) → f ∘ id ≡ f
+    ass : ∀ {W X Y Z} (f : Hom X W) (g : Hom Y X) (h : Hom Z Y)
+          → (f ∘ g) ∘ h ≡ f ∘ (g ∘ h)
 
 record Func {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B) (F : A → B) : Set₁ where
   open Cat
   field
     F₁ : ∀ {X Y} → Hom ℂ X Y → Hom 𝔻 (F X) (F Y)
+    F-id : ∀ {X} → F₁ {X} (ℂ .id) ≡ 𝔻 .id
+    F-∘ : ∀ {X Y Z} (f : Hom ℂ Y Z) (g : Hom ℂ X Y)
+          → F₁ (ℂ ._∘_ f g ) ≡ 𝔻 ._∘_ (F₁ f) (F₁ g)
+    
 
 record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
   (F G : A → B) (FF : Func ℂ 𝔻 F) (GG : Func ℂ 𝔻 G) : Set₁ where
@@ -366,13 +410,21 @@ record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
   open Func
   field
     η : ∀ X → Hom 𝔻 (F X) (G X)
+    nat : ∀ {X Y} (f : Hom ℂ X Y)
+      → 𝔻 ._∘_ (GG .F₁ f) (η X) ≡ 𝔻 ._∘_ (η Y) (FF .F₁ f)
 
-{- Functoriality ? -}
+postulate
+  Nat≡ : {A B : Type₁} {ℂ : Cat A} {𝔻 : Cat B} {F G : A → B}
+    → {FF : Func ℂ 𝔻 F} {GG : Func ℂ 𝔻 G}
+    → {α β : Nat ℂ 𝔻 F G FF GG}
+    → α .Nat.η ≡ β .Nat.η → α ≡ β
+
+{- Higher Functoriality -}
 
 ⟦_⟧Func : HCont A → Set₁
 ⟦_⟧Cat : (A : Ty) → Cat (Σ (HCont A) ⟦_⟧Func)
 
-⟦_⟧Func {*} X = Lift (suc zero) ⊤
+⟦_⟧Func {*} X = Lift ⊤
 ⟦_⟧Func {A ⇒ B} H =
   Σ[ HH ∈ ({F : HCont A} → ⟦ F ⟧Func → ⟦ H $ F ⟧Func) ]
   Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H $ F , HH FF)
@@ -380,12 +432,24 @@ record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
 ⟦ * ⟧Cat = record
   { Hom = λ (X , lift tt) (Y , lift tt) → HContHom X Y
   ; id = idHContHom
-  ; _∘_ = {!!}
+  ; _∘_ = ∘HContHom
+  ; idl = λ f i → {!!}
+  ; idr = {!!}
+  ; ass = {!!}
   }
 
 ⟦ A ⇒ B ⟧Cat = record
   { Hom = λ (F , FF , FFF) (G , GG , GGG)
     → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F $ X , FF XX) (λ (X , XX) → (G $ X) , GG XX) FFF GGG
-  ; id = {!!}
-  ; _∘_ = {!!}
+  ; id = record { η = λ X → ⟦ B ⟧Cat .Cat.id ; nat = {!!} }
+  ; _∘_ = λ x x₁ → record { η = λ X → ⟦ B ⟧Cat .Cat._∘_ (x .Nat.η X) (x₁ .Nat.η X) ; nat = {!!} }
+  ; idl = {!!}
+  ; idr = {!!}
+  ; ass = {!!}
   }
+
+{-
+⟦_⟧₁ : (H : HCont A) → ⟦ H ⟧Func
+⟦_⟧₁ {*} H = lift tt
+⟦_⟧₁ {A ⇒ B} (lam H) = {!!} , {!!}
+-}

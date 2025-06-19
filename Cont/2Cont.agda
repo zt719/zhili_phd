@@ -83,3 +83,13 @@ record 2⟦_⟧ (H : 2Cont) (F : 1Cont) (X : Set) : Set where
   ; k₀ = λ p₀ → 1⟦ F ⟧₁ (2⟦ h₀ s p₀ ⟧Hom F X) (k₀ (g₀ s p₀))
   ; k₁ = k₁ ∘ g₁ s
   }
+
+app : 2Cont → 1Cont → 1Cont
+app record { S = S ; P₀ = P₀ ; R₀ = R₀ ; P₁ = P₁ } record { S = 1S ; P = 1P }
+  = record { S = {!!} ; P = {!!} }
+
+
+_ : {H : 2Cont} {F : 1Cont} {X : Set} → 2⟦ H ⟧ F X → 1⟦ app H F ⟧ X
+_ = {!!}
+
+
