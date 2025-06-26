@@ -192,7 +192,6 @@ wkNeHom {Γ} {A} {B} x {n} {m} record { f = f ; g = g ; h = h }
   where
 -}
 
-
 wkSpHom x ε = ε
 wkSpHom x (α , αs) = wkNfHom x α , wkSpHom x αs
 
@@ -326,8 +325,6 @@ t $₁ α = napp₁ t α
 
 ⟦_⟧Hom : {A : Ty} {t u : HCont A} (α : HContHom t u) → Set₁
 ⟦_⟧Hom = {!!}
--}
-
 
 {-
 dom : Ty → Con
@@ -413,9 +410,18 @@ record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
   ; id = record { η = λ X → ⟦ B ⟧Cat .Cat.id }
   ; _∘_ = λ x x₁ → record { η = λ X → ⟦ B ⟧Cat .Cat._∘_ (x .Nat.η X) (x₁ .Nat.η X) }
   }
+-}
+{-
+app₂ : HCont ((* ⇒ *) ⇒ * ⇒ *) → HCont (* ⇒ *) → HCont (* ⇒ *)
+app₂
+  (lam (lam (ne record { S = HS ; P = HP ; R = HR })))
+  (lam (ne record { S = FS ; P = FP ; R = FR }))
+  = lam (ne (record { S = {!!} ; P = {!!} ; R = {!!} }))
+-}
 
 {-
-⟦_⟧₁ : (H : HCont A) → ⟦ H ⟧Func
-⟦_⟧₁ {*} H = lift tt
-⟦_⟧₁ {A ⇒ B} (lam H) = {!!} , {!!}
+Fix : Nf • ((* ⇒ *) ⇒ * ⇒ *)
+Fix = lam (lam (napp (nvar (vs vz)) (napp (napp (wkNf vz (wkNf vz Fix)) (nvar (vs vz))) (nvar vz))))
 -}
+
+

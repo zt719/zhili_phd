@@ -131,6 +131,7 @@ idHContHom = idNfHom
 ∘HContHom : HContHom J K → HContHom H J → HContHom H K
 ∘HContHom = ∘NfHom
 
+{-
 idl-NfHom : (α : NfHom t u) → ∘NfHom α idNfHom ≡ α
 idl-NeHom : (e : NeHom n m) → ∘NeHom e idNeHom ≡ e
 
@@ -140,6 +141,7 @@ idl-NeHom = {!!}
 idl-HContHom : (α : HContHom H J) → ∘HContHom α idHContHom ≡ α
 idl-HContHom (lam α) i = lam (idl-NfHom α i)
 idl-HContHom (ne x) = {!!}
+-}
 
 {- Weakening -}
 
@@ -419,6 +421,7 @@ postulate
     → {α β : Nat ℂ 𝔻 F G FF GG}
     → α .Nat.η ≡ β .Nat.η → α ≡ β
 
+{-
 {- Higher Functoriality -}
 
 ⟦_⟧Func : HCont A → Set₁
@@ -447,9 +450,4 @@ postulate
   ; idr = {!!}
   ; ass = {!!}
   }
-
-{-
-⟦_⟧₁ : (H : HCont A) → ⟦ H ⟧Func
-⟦_⟧₁ {*} H = lift tt
-⟦_⟧₁ {A ⇒ B} (lam H) = {!!} , {!!}
 -}

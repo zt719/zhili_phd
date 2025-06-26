@@ -95,7 +95,6 @@ record 2ContHom (C D : 2Cont) : Set
 
 2CONT : Cat
 
-{-# NO_POSITIVITY_CHECK #-}
 record 2Cont where
   inductive
   field
@@ -167,4 +166,3 @@ record 2⟦_⟧ (C : 2Cont) (F : 1Cont) (X : Set) : Set where
   ; k₀ = λ p → ⟦ F ⟧₁ (2⟦ g₀ s .ContHom.g p ⟧Hom F X) (k₀ (g₀ s .ContHom.f p))
   ; k₁ = k₁ ∘' g₁ s
   }
-
