@@ -6,7 +6,26 @@ open import Data.Product
 
 open import Level
 
-open import Cont.HCont
+{- Categories, Functors, Natural Transformation -}
+
+record Cat (Obj : Set₁) : Set₂ where
+  infixr 9 _∘_
+  field
+    Hom : Obj → Obj → Set₁
+    id : ∀ {X} → Hom X X
+    _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
+
+record Func {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B) (F : A → B) : Set₁ where
+  open Cat
+  field
+    F₁ : ∀ {X Y} → Hom ℂ X Y → Hom 𝔻 (F X) (F Y)
+
+record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
+  (F G : A → B) (FF : Func ℂ 𝔻 F) (GG : Func ℂ 𝔻 G) : Set₁ where
+  open Cat
+  open Func
+  field
+    η : ∀ X → Hom 𝔻 (F X) (G X)
 
 {- Syntax -}
 
@@ -59,7 +78,6 @@ private variable ts us ws : Sp Γ A B
 
 HCont : Ty → Set₁
 HCont A = Nf • A
-
 
 {- Morphism -}
 
@@ -154,24 +172,6 @@ wkNe {Γ} {A} {C} x record { S = S ; P = P ; R = R }
 wkSp x ε = ε
 wkSp x (n , ns) = wkNf x n , wkSp x ns
 
-wkNfHom : (x : Var Γ A) {t u : Nf (Γ - x) B} → NfHom t u → NfHom (wkNf x t) (wkNf x u)
-wkNeHom : (x : Var Γ A) {n m : Ne (Γ - x) B} → NeHom n m → NeHom (wkNe x n) (wkNe x m)
-wkSpHom : (x : Var Γ A) {ts us : Sp (Γ - x) B C} → SpHom ts us → SpHom (wkSp x ts) (wkSp x us)
-
-wkNfHom x (lam α) = lam (wkNfHom (vs x) α)
-wkNfHom x (ne e) = ne (wkNeHom x e)
-
-wkNeHom x = {!!}
-{-
-wkNeHom {Γ} {A} {B} x {n} {m} record { f = f ; g = g ; h = h }
-  = record { f = f ; g = {!!} ; h = {!!} }
-  where
--}
-
-
-wkSpHom x ε = ε
-wkSpHom x (α , αs) = wkNfHom x α , wkSpHom x αs
-
 {- Auxiliary functions -}
 
 appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
@@ -242,26 +242,6 @@ napp (lam t) u = t [ vz := u ]
 _$_ : HCont (A ⇒ B) → HCont A → HCont B
 _$_ = napp
 
-_[_:=_]₁ : (t : Nf Γ B) (x : Var Γ A) {u w : Nf (Γ - x) A}
-  → NfHom u w → NfHom (t [ x := u ]) (t [ x := w ])
-
-_<_:=_>₁ : (ts : Sp Γ B C) (x : Var Γ A) {u w : Nf (Γ - x) A}
-  → NfHom u w → SpHom (ts < x := u >) (ts < x := w >)
-
-napp₁ : (t : Nf Γ (A ⇒ B)) → NfHom u w → NfHom (napp t u) (napp t w)
-
-(lam t) [ x := α ]₁ = lam (t [ vs x := wkNfHom vz α ]₁)
-_[_:=_]₁ (ne record { S = S ; P = P ; R = R }) x {u} {w} α = {!!}
---  = ne (record { f = λ s → s ; g = {!!} ; h = {!!} })
-
-ε < x := α >₁ = ε
-(t , ts) < x := α >₁ = (t [ x := α ]₁) , (ts < x := α >₁)
-
-napp₁ (lam t) α = t [ vz := α ]₁
-
-_$₁_ : (t : HCont (A ⇒ B)) → HContHom u w → HContHom (t $ u) (t $ w)
-t $₁ α = napp₁ t α
-
 {- Semantics -}
 
 ⟦_⟧T : Ty → Set₁
@@ -279,7 +259,6 @@ t $₁ α = napp₁ t α
 ⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 
 ⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
--- record ⟦_⟧ne (_ : Ne Γ *) (γ : ⟦ Γ ⟧C) : Set
 
 ⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
 
@@ -292,100 +271,41 @@ t $₁ α = napp₁ t α
 ⟦ ε ⟧sp γ a = a
 ⟦ ns , n ⟧sp γ f = ⟦ n ⟧sp γ (f (⟦ ns ⟧nf γ))
 
-⟦_⟧ : HCont A → ⟦ A ⟧T
-⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
+⟦_⟧₀ : HCont A → ⟦ A ⟧T
+⟦ x ⟧₀ = ⟦ x ⟧nf (lift tt)
 
+{- Functoriality -}
 
-{-
-⟦_⟧NfHom : {t u : Nf Γ A} → NfHom t u → (γ : ⟦ Γ ⟧C) → Set₁
-⟦_⟧NfHom {Γ} {*} {t} {u} α γ = Lift (suc zero) (⟦ t ⟧nf γ → ⟦ u ⟧nf γ)
-⟦_⟧NfHom {Γ} {A ⇒ B} {t} {u} (lam α) γ = (a : ⟦ A ⟧T) → ⟦ α ⟧NfHom (γ , a)
+⟦_⟧F : (A : Ty) → ⟦ A ⟧T → Set₁
 
-⟦_⟧Hom : {A : Ty} {t u : HCont A} (α : HContHom t u) → Set₁
-⟦_⟧Hom = {!!}
--}
+⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧F)
 
-
-{-
-dom : Ty → Con
-dom * = •
-dom (A ⇒ B) = dom B ▷ A
-
-appDom : ⟦ A ⟧T → ⟦ dom A ⟧C → Set
-appDom {*} a (lift tt) = a
-appDom {A ⇒ B} f (γ , a) = appDom (f a) γ
-
-⟦_⟧nfHom : {t u : Nf Γ A} → NfHom t u → (γ : ⟦ Γ ⟧C) (δ : ⟦ dom A ⟧C)
-  → appDom (⟦ t ⟧nf γ) δ → appDom (⟦ u ⟧nf γ) δ
-  
-⟦_⟧neHom : {m n : Ne Γ *} → NeHom m n → (γ : ⟦ Γ ⟧C)
-  → ⟦ m ⟧ne γ → ⟦ n ⟧ne γ
-
-⟦_⟧spHom : {ts us : Sp Γ A B} → SpHom ts us → (γ : ⟦ Γ ⟧C) (a : ⟦ A ⟧T) (δ : ⟦ dom B ⟧C)
-  → appDom (⟦ ts ⟧sp γ a) δ → appDom (⟦ us ⟧sp γ a) δ
-
-⟦ lam α ⟧nfHom γ (δ , a) = ⟦ α ⟧nfHom (γ , a) δ
-⟦ ne e ⟧nfHom γ (lift tt) = ⟦ e ⟧neHom γ
-
-⟦ record { f = f ; g = g ; h = h } ⟧neHom γ (s , k)
-  = f s , λ x p → ⟦ h x s p ⟧spHom γ (⟦ x ⟧v γ) (lift tt) (k x (g x s p))
-
-⟦ ε ⟧spHom γ a δ x = x
-⟦ α , αs ⟧spHom γ f δ x = {!!}
-
-⟦_⟧Hom : {H J : HCont A} → HContHom H J
-  → (γ : ⟦ dom A ⟧C) → appDom ⟦ H ⟧ γ → appDom ⟦ J ⟧ γ
-⟦ α ⟧Hom γ = ⟦ α ⟧nfHom (lift tt) γ
-
-{-
-⟦_⟧₁ : (H : HCont ((* ⇒ *) ⇒ (* ⇒ *)))
-  → {F G : HCont (* ⇒ *)} (α : HContHom F G)
-  → {X Y : HCont *} (f : HContHom X Y)
-  → ⟦ H ⟧ ⟦ F ⟧ ⟦ X ⟧ → ⟦ H ⟧ ⟦ G ⟧ ⟦ Y ⟧
-⟦ lam (lam (ne record { S = S ; P = P ; R = R })) ⟧₁ {F} {G} α {X} {Y} f (s , k)
-  = s , λ{ vz p → {!!} ; (vs vz) p → {!!} }
--}
--}
-{- Categories, Functors, Natural Transformation -}
-
-record Cat (Obj : Set₁) : Set₂ where
-  infixr 9 _∘_
-  field
-    Hom : Obj → Obj → Set₁
-    id : ∀ {X} → Hom X X
-    _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
-
-record Func {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B) (F : A → B) : Set₁ where
-  open Cat
-  field
-    F₁ : ∀ {X Y} → Hom ℂ X Y → Hom 𝔻 (F X) (F Y)
-
-record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
-  (F G : A → B) (FF : Func ℂ 𝔻 F) (GG : Func ℂ 𝔻 G) : Set₁ where
-  open Cat
-  open Func
-  field
-    η : ∀ X → Hom 𝔻 (F X) (G X)
-
-{- Functoriality ? -}
-
-⟦_⟧Func : HCont A → Set₁
-⟦_⟧Cat : (A : Ty) → Cat (Σ (HCont A) ⟦_⟧Func)
-
-⟦_⟧Func {*} X = Lift (suc zero) ⊤
-⟦_⟧Func {A ⇒ B} H =
-  Σ[ HH ∈ ({F : HCont A} → ⟦ F ⟧Func → ⟦ H $ F ⟧Func) ]
-  Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H $ F , HH FF)
+⟦ * ⟧F X = Lift (suc zero) ⊤
+⟦ A ⇒ B ⟧F H =
+  Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧F F → ⟦ B ⟧F (H F)) ]
+  Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
 
 ⟦ * ⟧Cat = record
-  { Hom = λ (X , lift tt) (Y , lift tt) → HContHom X Y
-  ; id = idHContHom
-  ; _∘_ = {!!}
+  { Hom = λ (X , lift tt) (Y , lift tt) → Lift (suc zero) (X → Y)
+  ; id = lift (λ x → x)
+  ; _∘_ = λ{ (lift f) (lift g) → lift (λ x → f (g x)) }
   }
-
 ⟦ A ⇒ B ⟧Cat = record
   { Hom = λ (F , FF , FFF) (G , GG , GGG)
-    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F $ X , FF XX) (λ (X , XX) → (G $ X) , GG XX) FFF GGG
-  ; id = {!!}
-  ; _∘_ = {!!}
+    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
+  ; id = record { η = λ X → id }
+  ; _∘_ = λ α β → record { η = λ X → α .η X ∘ β .η X }
   }
+  where
+    open Cat ⟦ B ⟧Cat
+    open Nat
+
+HFunc : (A : Ty) → Set₁
+HFunc A = Σ ⟦ A ⟧T ⟦ A ⟧F
+
+⟦_⟧₁ : (t : HCont A) → ⟦ A ⟧F ⟦ t ⟧₀
+⟦_⟧₁ {A ⇒ B} (lam t) = (λ F FF → {!!}) , {!!}
+⟦ ne x ⟧₁ = lift tt
+
+⟦_⟧ : HCont A → HFunc A
+⟦ t ⟧ = ⟦ t ⟧₀ , ⟦ t ⟧₁

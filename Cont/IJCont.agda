@@ -16,7 +16,7 @@ record IJCont (I J : Set) : Set₁ where
 private variable
   SP TQ : IJCont I J
 
-record ContHom (SP TQ : IJCont I J) : Set where
+record IJContHom (SP TQ : IJCont I J) : Set where
   constructor _◃_
   open IJCont SP
   open IJCont TQ renaming (S to T; P to Q)
@@ -36,7 +36,7 @@ record ⟦_⟧ (SP : IJCont I J) (X : I → Set) (j : J) : Set where
   → (j : J) → ⟦ SP ⟧ X j → ⟦ SP ⟧ Y j
 ⟦ SP ⟧₁ f j (s , k) = s , λ i p → f i (k i p)
 
-⟦_⟧Hom : (fg : ContHom SP TQ)
+⟦_⟧Hom : (fg : IJContHom SP TQ)
   → (j : J) → ⟦ SP ⟧ X j → ⟦ TQ ⟧ X j
 ⟦ f ◃ g ⟧Hom j (s , k) = f j s , λ i p → k i (g i j s p)
 

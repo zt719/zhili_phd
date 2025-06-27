@@ -2,7 +2,7 @@
 
 module Cont.HContHFunc where
 
-open import Cubical.Foundations.Prelude hiding (_▷_)
+open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit renaming (Unit to ⊤)
 open import Cubical.Data.Sigma
 
@@ -54,9 +54,10 @@ private variable A B C : Ty
 ⟦ * ⟧T = Type
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
-{- Higher Functoriality -}
+{- Higher-order Functoriality -}
 
 ⟦_⟧T₁ : (A : Ty) → ⟦ A ⟧T → Type
+
 ⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧T₁)
 
 ⟦ * ⟧T₁ X = ⊤
@@ -75,7 +76,6 @@ private variable A B C : Ty
 ⟦ A ⇒ B ⟧Cat = record
   { Hom = λ (F , FF , FFF) (G , GG , GGG)
     → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
-
   ; id = record { η = λ X → id ; nat = λ f → idr _ ∙ sym (idl _) }
   ; _∘_ = λ{ record { η = η₁ ; nat = nat₁ } record { η = η₂ ; nat = nat₂ }
     → record { η = λ X → η₁ X ∘ η₂ X ; nat = λ f → sym (ass _ _ _) ∙ cong (_∘ _) (nat₁ f)
@@ -90,21 +90,16 @@ private variable A B C : Ty
 HFunc : Ty → Type
 HFunc A = Σ ⟦ A ⟧T ⟦ A ⟧T₁
 
-{- Syntax of Contexts -}
-
-infixl 5 _▷_
-
+infixl 5 _▹_
 data Con : Type where
   •   : Con
-  _▷_ : Con → Ty → Con
+  _▹_ : Con → Ty → Con
 
 private variable Γ Δ : Con
 
-{- Syntax of Higher Containers by Hereditary STLC -}
-
 data Var : Con → Ty → Type where
-  vz : Var (Γ ▷ A) A
-  vs : Var Γ A → Var (Γ ▷ B) A
+  vz : Var (Γ ▹ A) A
+  vs : Var Γ A → Var (Γ ▹ B) A
 
 private variable x y : Var Γ A
 
@@ -115,7 +110,7 @@ record Ne (Γ : Con) (B : Ty) : Type₁
 data Sp : Con → Ty → Ty → Type₁
 
 data Nf where
-  lam : Nf (Γ ▷ A) B → Nf Γ (A ⇒ B)
+  lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
   ne  : Ne Γ * → Nf Γ *
 
 private variable t u : Nf Γ A
@@ -142,7 +137,7 @@ HCont A = Nf • A
 
 ⟦_⟧C : Con → Type₁
 ⟦ • ⟧C = ⊤
-⟦ Γ ▷ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
+⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
 
 ⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
 ⟦ vz ⟧v (γ , a) = a
@@ -168,63 +163,25 @@ HCont A = Nf • A
 
 {- Functoriality -}
 
-open import Cubical.Data.Empty
-open import Cubical.Data.Bool
-
-MaybeHCont : HCont (* ⇒ *)
-MaybeHCont = lam (ne (record { S = S ; P = P ; R = R }))
-  where
-  S : Type
-  S = Bool
-
-  P : S → Var (• ▷ *) A → Type
-  P false vz = ⊥
-  P true vz = ⊤
-
-  R : (s : S) (x : Var (• ▷ *) A) → P s x → Sp (• ▷ *) A *
-  R true vz tt = ε
-
-eq : (ts : Sp Γ * *) (γ : ⟦ Γ ⟧C) (X : Type) → ⟦ ts ⟧sp γ X ≡ X
-eq ε γ X = refl
-
-{-
-1⟦_⟧ : (c : HCont (* ⇒ *)) → ⟦ * ⇒ * ⟧T₁ ⟦ c ⟧
-1⟦ lam (ne record { S = S ; P = P ; R = R }) ⟧ =
-  (λ X _ → tt) , record
-  { F₁ = λ{ {(X , tt)} {(Y , tt)} f (s , k) →
-    s , λ{ vz p → transport (sym (eq (R s vz p) (tt , Y) Y)) (f (transport (eq (R s vz p) (tt , X) X) (k vz p))) } }
-  ; F-id = λ{ {(X , tt)} i (s , k) → s , λ x p → {!!} }
-  ; F-∘ = {!!}
-  }
-  
-2⟦_⟧ : (hc : HCont ((* ⇒ *) ⇒ (* ⇒ *))) → ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T₁ ⟦ hc ⟧
-2⟦ lam (lam (ne record { S = S ; P = P ; R = R })) ⟧ =
-  (λ{ H (_ , record { F₁ = F₁ ; F-id = F-id ; F-∘ = F-∘ })
-  → _ , record { F₁ = {!!} ; F-id = {!!} ; F-∘ = {!!} }}
-  ) , record
-  { F₁ = {!!}
-  ; F-id = {!!}
-  ; F-∘ = {!!}
-  }
--}
-
 ⟦_⟧C₁ : (Γ : Con) (γ : ⟦ Γ ⟧C) → Set
 ⟦ • ⟧C₁ tt = ⊤
-⟦ Γ ▷ A ⟧C₁ (γ , a) = ⟦ Γ ⟧C₁ γ × ⟦ A ⟧T₁ a
+⟦ Γ ▹ A ⟧C₁ (γ , a) = ⟦ Γ ⟧C₁ γ × ⟦ A ⟧T₁ a
 
 ⟦_⟧nf₁ : (t : Nf Γ A) (γ : ⟦ Γ ⟧C) (γ₁ : ⟦ Γ ⟧C₁ γ) → ⟦ A ⟧T₁ (⟦ t ⟧nf γ)
-⟦ lam t ⟧nf₁ γ γ₁ = (λ a a₁ → ⟦ t ⟧nf₁ (γ , a) (γ₁ , a₁)) , record
-  { F₁ = {!!}
+⟦ lam t ⟧nf₁ γ γ₁ = (λ a a₁ → ⟦ t ⟧nf₁ (γ , a) (γ₁ , a₁))
+  , record
+  { F₁ = λ x → {!!}
   ; F-id = {!!}
   ; F-∘ = {!!}
   }
   where open Cat
 ⟦ ne x ⟧nf₁ γ γ₁ = tt
 
+{-
 ⟦_⟧ne₁ : (n : Ne Γ *) (x : Var Γ A) → Func {!!} {!!} {!!}
 ⟦_⟧ne₁ {Γ} record { S = S ; P = P ; R = R } x = record
   { F₁ = {!!} ; F-id = {!!} ; F-∘ = {!!} }
+-}
 
-
-⟦_⟧₁ : HCont A → HFunc A
-⟦ hc ⟧₁ = ⟦ hc ⟧ , ⟦ hc ⟧nf₁ tt tt
+⟦_⟧₁ : (t : HCont A) → ⟦ A ⟧T₁ (⟦ t ⟧)
+⟦ t ⟧₁ = ⟦ t ⟧nf₁ tt tt

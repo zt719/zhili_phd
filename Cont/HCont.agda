@@ -178,6 +178,7 @@ wkNe {Γ} {A} {C} x record { S = S ; P = P ; R = R }
 wkSp x ε = ε
 wkSp x (n , ns) = wkNf x n , wkSp x ns
 
+{-
 wkNfHom : (x : Var Γ A) {t u : Nf (Γ - x) B} → NfHom t u → NfHom (wkNf x t) (wkNf x u)
 wkNeHom : (x : Var Γ A) {n m : Ne (Γ - x) B} → NeHom n m → NeHom (wkNe x n) (wkNe x m)
 wkSpHom : (x : Var Γ A) {ts us : Sp (Γ - x) B C} → SpHom ts us → SpHom (wkSp x ts) (wkSp x us)
@@ -186,14 +187,13 @@ wkNfHom x (lam α) = lam (wkNfHom (vs x) α)
 wkNfHom x (ne e) = ne (wkNeHom x e)
 
 wkNeHom x = {!!}
-{-
 wkNeHom {Γ} {A} {B} x {n} {m} record { f = f ; g = g ; h = h }
   = record { f = f ; g = {!!} ; h = {!!} }
   where
--}
 
 wkSpHom x ε = ε
 wkSpHom x (α , αs) = wkNfHom x α , wkSpHom x αs
+-}
 
 {- Auxiliary functions -}
 
@@ -265,6 +265,7 @@ napp (lam t) u = t [ vz := u ]
 _$_ : HCont (A ⇒ B) → HCont A → HCont B
 _$_ = napp
 
+{-
 _[_:=_]₁ : (t : Nf Γ B) (x : Var Γ A) {u w : Nf (Γ - x) A}
   → NfHom u w → NfHom (t [ x := u ]) (t [ x := w ])
 
@@ -284,6 +285,7 @@ napp₁ (lam t) α = t [ vz := α ]₁
 
 _$₁_ : (t : HCont (A ⇒ B)) → HContHom u w → HContHom (t $ u) (t $ w)
 t $₁ α = napp₁ t α
+-}
 
 {- Semantics -}
 
@@ -316,7 +318,6 @@ t $₁ α = napp₁ t α
 
 ⟦_⟧ : HCont A → ⟦ A ⟧T
 ⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
-
 
 {-
 ⟦_⟧NfHom : {t u : Nf Γ A} → NfHom t u → (γ : ⟦ Γ ⟧C) → Set₁
@@ -418,10 +419,3 @@ app₂
   (lam (ne record { S = FS ; P = FP ; R = FR }))
   = lam (ne (record { S = {!!} ; P = {!!} ; R = {!!} }))
 -}
-
-{-
-Fix : Nf • ((* ⇒ *) ⇒ * ⇒ *)
-Fix = lam (lam (napp (nvar (vs vz)) (napp (napp (wkNf vz (wkNf vz Fix)) (nvar (vs vz))) (nvar vz))))
--}
-
-
