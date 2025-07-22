@@ -2,6 +2,11 @@
 
 module Cont.Cont where
 
+open import Data.Empty
+open import Data.Unit
+open import Data.Sum
+open import Data.Product
+
 open import Function.Base
 
 {- Container -}
@@ -43,8 +48,11 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
   → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
 ⟦ f ◃ g ⟧Hom X (s , k) = f s , (k ∘ g s)
 
-open import Data.Product
-open import Data.Sum
+zeroC : Cont
+zeroC = ⊥ ◃ λ ()
+
+oneC : Cont
+oneC = ⊤ ◃ λ{ tt → ⊥ }
 
 _×C_ : Cont → Cont → Cont
 (S ◃ P) ×C (T ◃ Q) = S × T ◃ λ (s , t) → P s ⊎ Q t
@@ -108,3 +116,18 @@ _∘C_ : Cont → Cont → Cont
 ≃ Σ f : (i : I) → S i . Σ i : I . P i (f i) → X -- curry
 = ⟦ (i : I) → S i ◃ λ f → Σ i : I . P i (f i) ⟧ X -- definition
 -}
+
+! : (SP : Cont) → ContHom zeroC SP
+! (S ◃ P) = f ◃ λ ()
+  where
+  f : ⊥ → S
+  f = λ ()
+
+¿ : (SP : Cont) → ContHom SP oneC
+¿ (S ◃ P) = f ◃ g
+  where
+  f : S → ⊤
+  f s = tt
+
+  g : (s : S) → ⊥ → P s
+  g s = λ ()

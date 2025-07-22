@@ -67,7 +67,7 @@ record 2⟦_⟧ (H : 2Cont) (F : 1Cont) (X : Set) : Set where
   record
   { s = s
   ; kx = f ∘ kx
-  ; kf = λ pf → 1⟦ α ⟧Hom (2⟦ H. RF s pf ⟧ G Y) (1⟦ F ⟧₁ (2⟦ H .RF s pf ⟧₁ α f) (kf pf))  
+  ; kf = λ pf → 1⟦ α ⟧Hom (2⟦ H .RF s pf ⟧ G Y) (1⟦ F ⟧₁ (2⟦ H .RF s pf ⟧₁ α f) (kf pf))
   }
   where open 2Cont
 
@@ -82,32 +82,7 @@ record 2⟦_⟧ (H : 2Cont) (F : 1Cont) (X : Set) : Set where
   ; kf = λ pf → 1⟦ F ⟧₁ (2⟦ hf s pf ⟧Hom F X) (kf (gf s pf))  
   }
 
-app : 2Cont → 1Cont → 1Cont
-app H F = {!!}
-
-app₁ : (H : 2Cont) → {F G : 1Cont} → 1ContHom F G → 1ContHom (app H F) (app H G)
-app₁ H f = {!6!}
-
-
-{-
-  2⟦ S₂ , PX , PF , RF ⟧ (S , P) X
-= Σ[ s₂ : S₂ ] ((PX s₂ → X) × ((pf : PF s₂) → 1⟦ S , P ⟧ (2⟦ RF s₂ p₂ ⟧ (S , P) X)))
-= Σ[ s₂ : S₂ ] ((PX s₂ → X) × ((pf : PF s₂) → Σ[ s : S ] (P s → 2⟦ RF s₂ pf ⟧ (S , P) X)))
-
-≃ Σ[ s₂ : S₂ ] ((PX s₂ → X) × (PF s₂ → Σ[ s : S ] (P s → Σ[ t : T ] (Q t → X))))
-
-≃ Σ[ s₂ : S₂ ] ((PX s₂ → X) × (PF s₂ → Σ[ s : S ] Σ[ f : P s → T ] ((ps : P s) → Q t → X)))
-
-≃ Σ[ s₂ : S₂ ] ((PX s₂ → X) × (PF s₂ → Σ[ (s , f) : Σ[ s : S ] (P s → T) ] ((ps : P s) → Q t → X)))
-
-≃ Σ[ s₂ : S₂ ] ((PX s₂ → X) × Σ[ f : PF s₂ → Σ[ s : S ] (P s → T) ] ((pf : PF s₂) (ps : P (f pf .proj₁)) → Q (f pf .proj₂ ps) → X))
-
-≃ Σ[ s₂ : S₂ ] ((PX s₂ → X) × Σ[ f : PF s₂ → Σ[ s : S ] (P s → T) ] Σ[ pf : PF s₂ ] Σ[ ps : P (f pf .proj₁) ] Q (f pf .proj₂ ps) → X)
-
-≃ Σ[ s₂ : S₂ ] (PX s₂ × Σ[ f : PF s₂ → Σ[ s : S ] (P s → T) ] Σ[ pf : PF s₂ ] Σ[ ps : P (f pf .proj₁) ] Q (f pf .proj₂ ps) → X)
-
-= Σ[ s' : S' ] (P' s' → X)
--}
+{- Examples -}
 
 open import Data.Empty
 open import Data.Unit
@@ -115,32 +90,14 @@ open import Data.Bool
 open import Data.Sum
 open import Data.Product
 
-H : (Set → Set) → Set → Set
-H F X = X × F (F X)
+B : (Set → Set) → Set → Set
+B F X = X × F (F X)
 
-X×FFX : 2Cont
-X×FFX = record { S = ⊤ ; PX = λ x → ⊤ ; PF = λ x → ⊤ ; RF = λ s x → FX }
+B-2Cont : 2Cont
+B-2Cont = record { S = ⊤ ; PX = λ x → ⊤ ; PF = λ x → ⊤ ; RF = λ s x → FX }
   where
   X : 2Cont
   X = record { S = ⊤ ; PX = λ x → ⊤ ; PF = λ x → ⊥ ; RF = λ s () }
   
   FX : 2Cont
   FX = record { S = ⊤ ; PX = λ x → ⊥ ; PF = λ x → ⊤ ; RF = λ s x → X }
-
-
-M : Set → Set
-M X = ⊤ ⊎ X
-
-⊤⊎X : 1Cont
-⊤⊎X = record { S = Bool ; P = λ{ false → ⊥ ; true → ⊤ } }
-
-HM : Set → Set
-HM X = H M X
--- = X × M (M X)
--- = X × (⊤ ⊎ (⊤ ⊎ X))
--- = X ⊎ X ⊎ X × X
-
-open import Data.Fin
-
-X⊎X⊎X×X : 1Cont
-X⊎X⊎X×X = record { S = Fin 3 ; P = λ{ zero → ⊤ ; (suc zero) → ⊤ ; (suc (suc zero)) → Fin 2 } }

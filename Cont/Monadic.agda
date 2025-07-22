@@ -1,5 +1,7 @@
 {-# OPTIONS --cubical #-}
 
+module Cont.Monadic where
+
 open import Function.Base
 
 open import Cubical.Foundations.Prelude
@@ -8,8 +10,6 @@ open import Cubical.Foundations.Isomorphism
 
 open import Cont.Cont
 open import Data.Pullback
-
-module Cont.General where
 
 module _ 
   (S : Set)

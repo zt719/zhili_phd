@@ -7,21 +7,29 @@ open import Cubical.Data.Unit renaming (Unit to ⊤)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum
 
-open import Cont.HFuncTIT
+open import Cont.HFunc
 
 N : ⟦ * ⇒ * ⟧T
 N X = ⊤ ⊎ X
 
 FuncN : ⟦ * ⇒ * ⟧Func N
 FuncN = _ , record
+  { F₁ = λ (lift f) → lift λ{ (inl tt) → inl tt ; (inr x) → inr (f x) }
+  ; F-id = λ i → lift {!!}   ; F-∘ = {!!} }
+
+{-
+FuncN : ⟦ * ⇒ * ⟧Func N
+FuncN = _ , record
   { F₁ = λ{ f (inl tt) → inl tt ; f (inr x) → inr (f x) }
   ; F-id = λ{ i (inl tt) → inl tt ; i (inr x) → inr x }
   ; F-∘ = λ{ f g i (inl tt) → inl tt ; f g i (inr x) → inr (f (g x)) }
   }
+-}
 
 B : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧T
 B F X = X × F (F X)
 
+{-
 FuncB : ⟦ (* ⇒ *) ⇒ (* ⇒ *) ⟧Func B
 FuncB = BB , BBB
   where
@@ -106,3 +114,4 @@ FuncL = LL , LLL
     record { η = η₁ ; nat = nat₁ }
     record { η = η₂ ; nat = nat₂ }
     = Nat≡ λ{ i (X , _) (inl tt) → inl tt ; i (X , _) (inr (x , fx)) → inr (x , η₁ (X , tt) (η₂ (X , tt) fx)) }
+-}
