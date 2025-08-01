@@ -1,3 +1,5 @@
+-- {-# OPTIONS --cubical-compatible #-}
+
 module Cont.HCont where
 
 open import Data.Empty
@@ -9,7 +11,7 @@ open import Level renaming (zero to lzero; suc to lsuc)
 
 {- Syntax -}
 
-{- Ty & Ctx & Var -}
+{- Ty & Con & Var -}
 
 infixr 20 _⇒_
 data Ty : Set where
@@ -19,13 +21,13 @@ data Ty : Set where
 variable A B C : Ty
 
 infixl 5 _▹_
-data Ctx : Set where
-  ∙   : Ctx
-  _▹_ : Ctx → Ty → Ctx
+data Con : Set where
+  ∙   : Con
+  _▹_ : Con → Ty → Con
 
-variable Γ Δ Θ : Ctx
+variable Γ Δ Θ : Con
 
-data Var : Ctx → Ty → Set where
+data Var : Con → Ty → Set where
   vz : Var (Γ ▹ A) A
   vs : Var Γ A → Var (Γ ▹ B) A
 
@@ -33,17 +35,17 @@ variable x y : Var Γ A
 
 {- Object -}
 
-data Nf : Ctx → Ty → Set₁
+data Nf : Con → Ty → Set₁
 
-record Ne (Γ : Ctx) (B : Ty) : Set₁
+record Ne (Γ : Con) (B : Ty) : Set₁
 
-data Sp : Ctx → Ty → Ty → Set₁
+data Sp : Con → Ty → Ty → Set₁
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
   ne  : Ne Γ * → Nf Γ *
 
-variable t u w : Nf Γ A
+variable t u v : Nf Γ A
 
 record Ne Γ B where
   constructor _◃_◃_
@@ -53,22 +55,20 @@ record Ne Γ B where
     P : Var Γ A → S → Set
     R : (x : Var Γ A) (s : S) → P x s → Sp Γ A B
 
-variable n m l : Ne Γ A
+variable spr tql : Ne Γ A
 
 data Sp where
   ε   : Sp Γ A A
   _,_ : Nf Γ A → Sp Γ B C → Sp Γ (A ⇒ B) C
 
-variable ts us ws : Sp Γ A B
+variable ts us : Sp Γ A B
 
 HCont : Ty → Set₁
 HCont A = Nf ∙ A
 
-variable H J K : HCont A
-
 {- Weakening -}
 
-_-_ : (Γ : Ctx) → Var Γ A → Ctx
+_-_ : (Γ : Con) → Var Γ A → Con
 ∙ - ()
 (Γ ▹ A) - vz = Γ
 (Γ ▹ A) - (vs x) = (Γ - x) ▹ A
@@ -99,7 +99,7 @@ wkNe : (x : Var Γ A) → Ne (Γ - x) B → Ne Γ B
 wkSp : (x : Var Γ A) → Sp (Γ - x) B C → Sp Γ B C
 
 wkNf x (lam t) = lam (wkNf (vs x) t)
-wkNf x (ne e) = ne (wkNe x e)
+wkNf x (ne spr) = ne (wkNe x spr)
 
 wkNe {Γ} {A} {C} x (S ◃ P ◃ R) = S ◃ P' ◃ R'
   where
@@ -113,13 +113,13 @@ wkNe {Γ} {A} {C} x (S ◃ P ◃ R) = S ◃ P' ◃ R'
   R' y s p | diff .x y' = wkSp x (R y' s p)
 
 wkSp x ε = ε
-wkSp x (n , ns) = wkNf x n , wkSp x ns
+wkSp x (t , ts) = wkNf x t , wkSp x ts
 
 {- Auxiliary functions -}
 
 appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
 appSp ε u = u , ε
-appSp (n , ns) u = n , appSp ns u
+appSp (t , ts) u = t , appSp ts u
 
 {- η-expansion -}
 
@@ -141,8 +141,8 @@ nvar {Γ} {B} x = ne2nf (S ◃ P ◃ R)
   R .x tt p | same = ε
   R y tt () | diff .x y'
 
-ne2nf {Γ} {*} x = ne x
-ne2nf {Γ} {A ⇒ C} (S ◃ P ◃ R) =  lam (ne2nf (S ◃ P' ◃ R'))
+ne2nf {Γ} {*} spr = ne spr
+ne2nf {Γ} {A ⇒ C} (S ◃ P ◃ R) = lam (ne2nf (S ◃ P' ◃ R'))
   where
   P' : Var (Γ ▹ A) B → S → Set
   P' vz s = ⊥
@@ -181,23 +181,23 @@ napp (lam t) u = t [ vz := u ]
 
 {- Semantics -}
 
-⟦_⟧T : Ty → Set₁
-⟦ * ⟧T = Set
-⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
+⟦_⟧t : Ty → Set₁
+⟦ * ⟧t = Set
+⟦ A ⇒ B ⟧t = ⟦ A ⟧t → ⟦ B ⟧t
 
-⟦_⟧C : Ctx → Set₁
-⟦ ∙ ⟧C = Lift (lsuc lzero) ⊤
-⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
+⟦_⟧c : Con → Set₁
+⟦ ∙ ⟧c = Lift (lsuc lzero) ⊤
+⟦ Γ ▹ A ⟧c = ⟦ Γ ⟧c × ⟦ A ⟧t
 
-⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
+⟦_⟧v : Var Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
 ⟦ vz ⟧v (γ , a) = a
 ⟦ vs x ⟧v (γ , a) = ⟦ x ⟧v γ
 
-⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
+⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
 
-⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
+⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧c → Set
 
-⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
+⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧c → ⟦ A ⟧t → ⟦ B ⟧t
 
 ⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
 ⟦ ne x ⟧nf γ = ⟦ x ⟧ne γ
@@ -208,34 +208,22 @@ napp (lam t) u = t [ vz := u ]
 ⟦ ε ⟧sp γ a = a
 ⟦ ns , n ⟧sp γ f = ⟦ n ⟧sp γ (f (⟦ ns ⟧nf γ))
 
-⟦_⟧ : HCont A → ⟦ A ⟧T
+⟦_⟧ : HCont A → ⟦ A ⟧t
 ⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
 
 {- Algebraic Structure -}
 
-_⊎Ne_ : Ne Γ B → Ne Γ B → Ne Γ B
-_⊎Ne_ {Γ} {B} (S ◃ P ◃ R) (T ◃ Q ◃ L) = S' ◃ P' ◃ R'
-  where
-  S' : Set
-  S' = S ⊎ T
+onenf : Nf Γ A
+onenf {Γ} {*} = ne (⊤ ◃ (λ{ x tt → ⊥ }) ◃ λ{ x tt () })
+onenf {Γ} {A ⇒ B} = lam onenf
 
-  P' : Var Γ A → S' → Set
-  P' x (inj₁ s) = P x s
-  P' x (inj₂ t) = Q x t
+zeronf : Nf Γ A
+zeronf {Γ} {*} = ne (⊥ ◃ (λ x ()) ◃ (λ x ()))
+zeronf {Γ} {A ⇒ B} = lam zeronf
 
-  R' : (x : Var Γ A) (s : S') → P' x s → Sp Γ A B
-  R' x (inj₁ s) p = R x s p
-  R' x (inj₂ t) q = L x t q
-
-_⊎Nf_ : Nf Γ A → Nf Γ A → Nf Γ A
-lam t ⊎Nf lam u = lam (t ⊎Nf u)
-ne n ⊎Nf ne m = ne (n ⊎Ne m)
-
-_⊎C_ : HCont A → HCont A → HCont A
-_⊎C_ = _⊎Nf_
-
-_×Ne_ : Ne Γ B → Ne Γ B → Ne Γ B
-_×Ne_ {Γ} {B} (S ◃ P ◃ R) (T ◃ Q ◃ L) = S' ◃ P' ◃ R'
+_×nf_ : Nf Γ A → Nf Γ A → Nf Γ A
+lam t ×nf lam u = lam (t ×nf u)
+_×nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S' ◃ P' ◃ R')
   where
   S' : Set
   S' = S × T
@@ -247,23 +235,17 @@ _×Ne_ {Γ} {B} (S ◃ P ◃ R) (T ◃ Q ◃ L) = S' ◃ P' ◃ R'
   R' x (s , t) (inj₁ p) = R x s p
   R' x (s , t) (inj₂ q) = L x t q
 
-_×Nf_ : Nf Γ A → Nf Γ A → Nf Γ A
-lam t ×Nf lam u = lam (t ×Nf u)
-ne n ×Nf ne m = ne (n ×Ne m)
+_⊎nf_ : Nf Γ A → Nf Γ A → Nf Γ A
+lam t ⊎nf lam u = lam (t ⊎nf u)
+_⊎nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S' ◃ P' ◃ R')
+  where
+  S' : Set
+  S' = S ⊎ T
 
-_×C_ : HCont A → HCont A → HCont A
-_×C_ = _×Nf_
+  P' : Var Γ A → S' → Set
+  P' x (inj₁ s) = P x s
+  P' x (inj₂ t) = Q x t
 
-zeroNf : Nf Γ A
-zeroNf {Γ} {*} = ne (⊥ ◃ (λ x ()) ◃ (λ x ()))
-zeroNf {Γ} {A ⇒ B} = lam zeroNf
-
-zero : HCont A
-zero = zeroNf
-
-oneNf : Nf Γ A
-oneNf {Γ} {*} = ne (⊤ ◃ (λ{ x tt → ⊥ }) ◃ λ{ x tt () })
-oneNf {Γ} {A ⇒ B} = lam oneNf
-
-one : HCont A
-one = oneNf
+  R' : (x : Var Γ A) (s : S') → P' x s → Sp Γ A B
+  R' x (inj₁ s) p = R x s p
+  R' x (inj₂ t) q = L x t q

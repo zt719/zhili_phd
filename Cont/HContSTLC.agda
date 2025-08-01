@@ -14,20 +14,20 @@ open import Relation.Binary.PropositionalEquality
 η : lam (app u) ≡ u
 η {u = lam u} = refl
 
-data Nfs : Con → Con → Set₁ where
-  id : Nfs Γ Γ
-  _∘_ : Nfs Δ Θ → Nfs Γ Δ  → Nfs Γ Θ
-  ε : Nfs Γ ∙
-  _,_ : Nfs Γ Δ → Nf Γ A → Nfs Γ (Δ ▹ A)
+data Sub : Ctx → Ctx → Set₁ where
+  id : Sub Γ Γ
+  _∘_ : Sub Δ Θ → Sub Γ Δ  → Sub Γ Θ
+  ε : Sub Γ ∙
+  _,_ : Sub Γ Δ → Nf Γ A → Sub Γ (Δ ▹ A)
 
-_[_] : Nf Γ A → Nfs Γ Δ → Nf Δ A
+_[_] : Nf Γ A → Sub Γ Δ → Nf Δ A
 
-wkC : Nfs (Γ ▹ A) Γ
+wkC : Sub (Γ ▹ A) Γ
 wkC = {!!}
 
-_↑ : Nfs Γ Δ → Nfs (Γ ▹ A) (Δ ▹ A)
+_↑ : Sub Γ Δ → Sub (Γ ▹ A) (Δ ▹ A)
 σ ↑ = (σ ∘ {!!}) , nvar vz
 
-ξ : {t : Nf (Γ ▹ A) B} {γ : Nfs Γ Δ}
+ξ : {t : Nf (Γ ▹ A) B} {γ : Sub Γ Δ}
   → (lam t) [ γ ] ≡ lam {!!}
 ξ = {!!}

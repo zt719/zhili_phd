@@ -3,7 +3,7 @@ module Hereditary where
 {- The calculus -}
 
 data Ty : Set where
-  ∘   : Ty
+  *   : Ty
   _⇒_ : Ty → Ty → Ty
 
 variable A B C : Ty
@@ -12,7 +12,7 @@ data Con : Set where
   ∙   : Con
   _▹_ : Con → Ty → Con
 
-variable Γ Δ : Con
+variable Γ Δ Θ : Con
 
 data Var : Con → Ty → Set where
   vz : Var (Γ ▹ A) A
@@ -24,8 +24,6 @@ data Tm : Con → Ty → Set where
   var : Var Γ A → Tm Γ A
   lam : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
   app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-
-variable t u : Tm Γ A
 
 {- Weakening -}
 
@@ -57,17 +55,41 @@ wkTm x (var v) = var (wkv x v)
 wkTm x (lam t) = lam (wkTm (vs x) t)
 wkTm x (app t u) = app (wkTm x t) (wkTm x u)
 
-{- Substitution function -}
+{- Tmsstitution function -}
 
 substVar : Var Γ B → (x : Var Γ A) → Tm (Γ - x) A → Tm (Γ - x) B
 substVar v x u with eq x v
-... | same = u
-... | diff .x v' = var v'
+substVar v .v u | same = u
+substVar .(wkv v x) .v u | diff v x = var x
 
 subst : Tm Γ B → (x : Var Γ A) → Tm (Γ - x) A → Tm (Γ - x) B
 subst (var v) x u = substVar v x u
 subst (lam t) x u = lam (subst t (vs x) (wkTm vz u))
 subst (app t₁ t₂) x u = app (subst t₁ x u) (subst t₂ x u)
+
+data Tms : Con → Con → Set where
+  ε   : Tms Γ ∙
+  _,_ : Tms Δ Γ → Tm Δ A → Tms Δ (Γ ▹ A)
+
+wkTms : (x : Var Δ A) → Tms (Δ - x) Γ → Tms Δ Γ
+wkTms x ε = ε
+wkTms x (γ , t) = wkTms x γ , wkTm x t
+
+_↑ : Tms Δ Γ → Tms (Δ ▹ A) (Γ ▹ A)
+γ ↑ = wkTms vz γ , var vz
+
+id : Tms Γ Γ
+id {∙} = ε
+id {Γ ▹ A} = id ↑
+
+_[_]v : Var Γ A → Tms Δ Γ → Tm Δ A
+vz [ γ , t ]v = t
+vs x [ γ , t ]v = x [ γ ]v
+
+_[_] : Tm Γ A → Tms Δ Γ → Tm Δ A
+var x [ γ ] = x [ γ ]v
+lam t [ γ ] = lam (t [ γ ↑ ])
+app t₁ t₂ [ γ ] = app (t₁ [ γ ]) (t₂ [ γ ])
 
 {- Normal forms -}
 
@@ -79,7 +101,7 @@ data Sp : Con → Ty → Ty → Set
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
-  ne  : Ne Γ ∘ → Nf Γ ∘
+  ne  : Ne Γ * → Nf Γ *
 
 data Ne where
   _,_ : Var Γ A → Sp Γ A B → Ne Γ B
@@ -87,6 +109,8 @@ data Ne where
 data Sp where
   ε   : Sp Γ A A
   _,_ : Nf Γ A → Sp Γ B C → Sp Γ (A ⇒ B) C
+
+variable t u : Nf Γ A
 
 embNf : Nf Γ A → Tm Γ A
 embNe : Ne Γ A → Tm Γ A
@@ -121,9 +145,9 @@ ne2nf : Ne Γ A → Nf Γ A
 
 nvar x = ne2nf (x , ε)
 
-ne2nf {A = ∘} e = ne e
+ne2nf {A = *} e = ne e
 ne2nf {A = A ⇒ B} (v , ns) =
-  lam (ne2nf (vs v , appSp (wkSp vz ns) (nvar vz)))
+  lam (ne2nf {A = B} (vs v , appSp (wkSp vz ns) (nvar vz)))
 
 {- Nomarlization -}
 
@@ -153,10 +177,40 @@ nf (var x) = nvar x
 nf (lam t) = lam (nf t)
 nf (app t u) = napp (nf t) (nf u)
 
--- λf.λz.f ((λx.f x) z)
-ex0 : Tm ∙ ((∘ ⇒ ∘) ⇒ (∘ ⇒ ∘))
-ex0 = lam (lam (app (var (vs vz)) (app (lam (app (var (vs (vs vz))) (var vz))) (var vz))))
+data Nfs : Con → Con → Set where
+  ε   : Nfs Γ ∙
+  _,_ : Nfs Δ Γ → Nf Δ A → Nfs Δ (Γ ▹ A)
 
--- λf.λz.f z
-ex1 : Tm ∙ ((∘ ⇒ ∘) ⇒ (∘ ⇒ ∘))
-ex1 = lam (var vz)
+wkNfs : (x : Var Δ A) → Nfs (Δ - x) Γ → Nfs Δ Γ
+wkNfs x ε = ε
+wkNfs x (γ , t) = wkNfs x γ , wkNf x t
+
+_↑nf : Nfs Δ Γ → Nfs (Δ ▹ A) (Γ ▹ A)
+γ ↑nf = wkNfs vz γ , nvar vz
+
+idnf : Nfs Γ Γ
+idnf {∙} = ε
+idnf {Γ ▹ A} = idnf ↑nf
+
+subVar : Var Γ A → Nfs Δ Γ → Nf Δ A
+subVar vz (γ , t) = t
+subVar (vs x) (γ , t) = subVar x γ
+
+foldnapp : Nf Γ A → Sp Γ A B → Nf Γ B
+foldnapp t ε = t
+foldnapp t (u , us) = foldnapp (napp t u) us
+
+_[_]nf : Nf Γ A → Nfs Δ Γ → Nf Δ A
+
+_[_]sp : Sp Γ A B → Nfs Δ Γ → Sp Δ A B
+
+lam t [ γ ]nf = lam (t [ γ ↑nf ]nf)
+ne (x , ε) [ γ ]nf = subVar x γ 
+ne (x , (t , ts)) [ γ ]nf = foldnapp (napp (subVar x γ) (t [ γ ]nf)) (ts [ γ ]sp)
+
+ε [ γ ]sp = ε
+(t , ts) [ γ ]sp = (t [ γ ]nf) , (ts [ γ ]sp)
+
+_∘_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
+ε ∘ x₁ = ε
+(δ , t) ∘ γ = (δ ∘ γ) , (t [ γ ]nf)

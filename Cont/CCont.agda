@@ -17,9 +17,9 @@ _∘'_ : {X Y Z : Set} → (Y → Z) → (X → Y) → X → Z
 (f ∘' g) x = f (g x)
 
 module _ (ℂ : Cat) where
+
   open Cat ℂ
 
-  {- Container -}
   infix  0 _◃_
   record Cont : Set₁ where
     constructor _◃_
@@ -29,7 +29,6 @@ module _ (ℂ : Cat) where
 
   private variable SP TQ : Cont
 
-  {- Container Hom -}
   record ContHom (SP TQ : Cont) : Set where
     constructor _◃_
     open Cont SP
@@ -44,23 +43,15 @@ module _ (ℂ : Cat) where
   CONT .id = id' ◃ λ s → id
   CONT ._∘_ (f ◃ g) (h ◃ k) = f ∘' h ◃ λ s → k s ∘ g (h s)
 
-module _ {ℂ : Cat} where
-
-  open Cat ℂ
-
-  {- Container Extension Functor -}
-  record ⟦_⟧ (SP : Cont ℂ) (X : Obj) : Set where
+  record ⟦_⟧ (SP : Cont) (X : Obj) : Set where
     constructor _,_
     open Cont SP
     field
       s : S
-      p : Hom (P s) X
+      k : Hom (P s) X
 
-  {- Functoriality -}
-  ⟦_⟧₁ : (SP : Cont ℂ) {X Y : Obj} → Hom X Y → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
-  ⟦ SP ⟧₁ f (s , p) = s , (f ∘ p)
-  {-# INLINE ⟦_⟧₁ #-}
+  ⟦_⟧₁ : (SP : Cont) {X Y : Obj} → Hom X Y → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
+  ⟦ SP ⟧₁ f (s , k) = s , (f ∘ k)
 
-  {- Naturality -}
-  ⟦_⟧Hom : {SP TQ : Cont ℂ} → ContHom ℂ SP TQ → (X : Obj) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-  ⟦ f ◃ g ⟧Hom X (s , p) = f s , (p ∘ g s)
+  ⟦_⟧Hom : {SP TQ : Cont} → ContHom SP TQ → (X : Obj) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+  ⟦ f ◃ g ⟧Hom X (s , k) = f s , (k ∘ g s)

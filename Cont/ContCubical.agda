@@ -1,6 +1,6 @@
-{-# OPTIONS --cubical #-}
+{-# OPTIONS --cubical --guardedness #-}
 
-module Cont.ContCubical where
+module ContCubical where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
@@ -53,6 +53,7 @@ record ContHom (SP TQ : Cont) : Type where
   (λ α i (s , k) → f s , λ p → α (k (g s p)))
 
 open Category
+open ContHom
 
 CONT : Category (ℓ-suc ℓ-zero) ℓ-zero
 CONT .ob = Cont 
@@ -63,11 +64,17 @@ CONT .⋆IdL (f ◃ g) i = f ◃ g
 CONT .⋆IdR (f ◃ g) i = f ◃ g
 CONT .⋆Assoc (f ◃ g) (f′ ◃ g′) (f′′ ◃ g′′) i
   = (λ s → f′′ (f′ (f s))) ◃ (λ s p → g s (g′ (f s) (g′′ (f′ (f s)) p)))
-CONT .isSetHom {S ◃ P & isSetS & isSetP} {T ◃ Q & isSetT & isSetQ}
-  = {!isSetΣ!}
-
---  isSetΣ (isSet→ isSetT) (λ f → isSetΠ (λ s → isSet→ (isSetP s)))
---  It obviouly works using Σ but not for record, because I don't have 'isSetRecord'
+f (CONT .isSetHom {S ◃ P & isSetS & isSetP} {T ◃ Q & isSetT & isSetQ} m n p q i j) s =
+  isSetT (f m s) (f n s) (λ k → f (p k) s) (λ k → f (q k) s) i j
+g (CONT .isSetHom {S ◃ P & isSetS & isSetP} {T ◃ Q & isSetT & isSetQ} m n p q i j) s = 
+  isSet→SquareP
+    {A = λ i j → Q (isSetT (f m s) (f n s) (λ k → f (p k) s) (λ k → f (q k) s) i j) → P s}
+     (λ _ _ → isSet→ (isSetP s))
+     (λ k → g (p k) s)
+     (λ k → g (q k) s)
+     (λ _ → g m s)
+     (λ _ → g n s)
+     i j
 
 one : Cont
 one = ⊤ ◃ (λ s → ⊥) & isSet⊤ & (λ s → λ ())
@@ -87,11 +94,13 @@ _⊎C_ : Cont → Cont → Cont
 
 -- What to do with these two holes ????
 
+{-
 zero-𝟘 : Initial CONT
 zero-𝟘 = zero , λ (S ◃ P & isSetS & isSetP) → ((λ ()) ◃ (λ ())) , λ (f ◃ g) i → {!!}
 
 one-𝟙 : Terminal CONT
 one-𝟙 = one , λ y → ((λ s → tt) ◃ (λ s → λ ())) , λ (f ◃ g) i → {!!}
+-}
 
 ⊥-𝟘 : Initial (SET ℓ-zero)
 ⊥-𝟘 = (⊥ , λ ()) , λ y → (λ ()) , λ{ g i () }
