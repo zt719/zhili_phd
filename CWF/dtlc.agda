@@ -79,27 +79,27 @@ data EL where
   π₂β : TmΓ≡ (cong (A [_]T) π₁β) (π₂ (γ , t)) ≡ t
   -- π₂β : π₂ (γ , t) ≡ TmΓ≡ (sym (cong (A [_]T) π₁β)) t  
   -- π₂β : π₂ (γ , t) ≡[ cong (A [_]T) π₁β ]≡ t
-    
   πη  : π₁ γ , π₂ γ ≡ γ
   ,∘  : (δ , t) ∘ γ ≡ δ ∘ γ , TmΓ≡ (sym [∘]T) (t [ γ ]t)  
 
-  _↑_  : (γ : Tms Δ Γ) (A : Ty Γ) → Tms (Δ ▹ (A [ γ ]T)) (Γ ▹ A)
-  ↑≡   : γ ↑ A ≡ γ ∘ π₁ id , TmΓ≡ (sym [∘]T) (π₂ id)
-
-  {- Dependent Function Types -}
+  {- Adding Dependent Function Types -}
   Π    : Ty Γ → Ty (Γ ▹ A) → Ty Γ
   lam  : Tm (Γ ▹ A) B → Tm Γ (Π A B)
   app  : Tm Γ (Π A B) → Tm (Γ ▹ A) B
-
-  Π[]  : (Π A B) [ γ ]T ≡ Π (A [ γ ]T) (B [ γ ↑ A ]T)
-  lam[] : TmΓ≡ Π[] (lam t [ γ ]t) ≡ lam (t [ γ ↑ A ]t)
-  --lam[] : lam t [ γ ]t ≡[ Π[] ]≡ lam (t [ γ ↑ A ]t)  
   Πβ  : app (lam t) ≡ t  
   Πη  : lam (app t) ≡ t
+
+  _↑_  : (γ : Tms Δ Γ) (A : Ty Γ) → Tms (Δ ▹ (A [ γ ]T)) (Γ ▹ A)
+  ↑≡   : γ ↑ A ≡ γ ∘ π₁ id , TmΓ≡ (sym [∘]T) (π₂ id)
+  Π[]  : (Π A B) [ γ ]T ≡ Π (A [ γ ]T) (B [ γ ↑ A ]T)
+  lam[] : TmΓ≡ Π[] (lam t [ γ ]t) ≡ lam (t [ γ ↑ A ]t)
+  --lam[] : lam t [ γ ]t ≡[ Π[] ]≡ lam (t [ γ ↑ A ]t)
+  app[] : app (TmΓ≡ Π[] (t [ γ ]t)) ≡ app t [ γ ↑ A ]t  
 
   {- Universe of Small Types -}
   U    : Ty Γ
   El   : Tm Γ U → Ty Γ
+  Π̂    : (t : Tm Γ U) → Tm (Γ ▹ El t) U → EL (ty Γ)
   U[]  : U [ γ ]T ≡ U
   El[] : El t [ γ ]T ≡ El (TmΓ≡ U[] (t [ γ ]t))
 

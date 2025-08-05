@@ -24,7 +24,7 @@ data Tm : Con → Ty → Set where
   var : Var Γ A → Tm Γ A
   lam : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
   app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-
+  
 {- Weakening -}
 
 _-_ : (Γ : Con) → Var Γ A → Con
@@ -140,14 +140,14 @@ appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
 appSp ε n = n , ε
 appSp (t , ts) n = t , appSp ts n
 
-nvar : Var Γ A → Nf Γ A
+var2nf : Var Γ A → Nf Γ A
 ne2nf : Ne Γ A → Nf Γ A
 
-nvar x = ne2nf (x , ε)
+var2nf x = ne2nf (x , ε)
 
 ne2nf {A = *} e = ne e
 ne2nf {A = A ⇒ B} (v , ns) =
-  lam (ne2nf {A = B} (vs v , appSp (wkSp vz ns) (nvar vz)))
+  lam (ne2nf {A = B} (vs v , appSp (wkSp vz ns) (var2nf vz)))
 
 {- Nomarlization -}
 
@@ -159,8 +159,8 @@ _◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 
 napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
 
-(lam t) [ x := u ] = lam (t [ vs x := wkNf vz u ])
-(ne (y , ts)) [ x := u ] with eq x y
+lam t [ x := u ] = lam (t [ vs x := wkNf vz u ])
+ne (y , ts) [ x := u ] with eq x y
 ... | same = u ◇ (ts < x := u >)
 ... | diff .x y' = ne (y' , (ts < x := u >))
 
@@ -172,11 +172,6 @@ t ◇ (u , us) = napp t u ◇ us
 
 napp (lam t) u = t [ vz := u ]
 
-nf : Tm Γ A → Nf Γ A
-nf (var x) = nvar x
-nf (lam t) = lam (nf t)
-nf (app t u) = napp (nf t) (nf u)
-
 data Nfs : Con → Con → Set where
   ε   : Nfs Γ ∙
   _,_ : Nfs Δ Γ → Nf Δ A → Nfs Δ (Γ ▹ A)
@@ -186,31 +181,34 @@ wkNfs x ε = ε
 wkNfs x (γ , t) = wkNfs x γ , wkNf x t
 
 _↑nf : Nfs Δ Γ → Nfs (Δ ▹ A) (Γ ▹ A)
-γ ↑nf = wkNfs vz γ , nvar vz
+γ ↑nf = wkNfs vz γ , var2nf vz
 
-idnf : Nfs Γ Γ
-idnf {∙} = ε
-idnf {Γ ▹ A} = idnf ↑nf
+idNfs : Nfs Γ Γ
+idNfs {∙} = ε
+idNfs {Γ ▹ A} = idNfs ↑nf
 
-subVar : Var Γ A → Nfs Δ Γ → Nf Δ A
-subVar vz (γ , t) = t
-subVar (vs x) (γ , t) = subVar x γ
+subVar2nf : Var Γ A → Nfs Δ Γ → Nf Δ A
+subVar2nf vz (γ , t) = t
+subVar2nf (vs x) (γ , t) = subVar2nf x γ
 
-foldnapp : Nf Γ A → Sp Γ A B → Nf Γ B
-foldnapp t ε = t
-foldnapp t (u , us) = foldnapp (napp t u) us
+fold : Nf Γ A → Sp Γ A B → Nf Γ B
+fold t ε = t
+fold t (u , us) = fold (napp t u) us
 
 _[_]nf : Nf Γ A → Nfs Δ Γ → Nf Δ A
+
+subNe2nf : Ne Γ A → Nfs Δ Γ → Nf Δ A
 
 _[_]sp : Sp Γ A B → Nfs Δ Γ → Sp Δ A B
 
 lam t [ γ ]nf = lam (t [ γ ↑nf ]nf)
-ne (x , ε) [ γ ]nf = subVar x γ 
-ne (x , (t , ts)) [ γ ]nf = foldnapp (napp (subVar x γ) (t [ γ ]nf)) (ts [ γ ]sp)
+ne e [ γ ]nf = subNe2nf e γ
+
+subNe2nf (x , ts) γ = fold (subVar2nf x γ) (ts [ γ ]sp)
 
 ε [ γ ]sp = ε
 (t , ts) [ γ ]sp = (t [ γ ]nf) , (ts [ γ ]sp)
 
-_∘_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
-ε ∘ x₁ = ε
-(δ , t) ∘ γ = (δ ∘ γ) , (t [ γ ]nf)
+_∘nfs_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
+ε ∘nfs x₁ = ε
+(δ , t) ∘nfs γ = (δ ∘nfs γ) , (t [ γ ]nf)
