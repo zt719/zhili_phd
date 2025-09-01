@@ -1,4 +1,4 @@
-{-# OPTIONS --cubical #-}
+{-# OPTIONS --cubical --guardedness #-}
 
 module Cont.Free where
 
@@ -7,33 +7,24 @@ open import Cubical.Data.Empty renaming (rec to ⊥-rec)
 open import Cubical.Data.Unit renaming (Unit to ⊤)
 open import Cubical.Data.Bool
 open import Cubical.Data.Sigma
-open import Cubical.Foundations.Isomorphism
-  renaming (Iso to _≅_)
 open import Function.Base
 
 open import Data.Pullback
 open import Cont.Cont
 
-data Free (FC : Cont) (A : Set) : Set where
-  Var : A → Free FC A
-  Con  : ⟦ FC ⟧ (Free FC A) → Free FC A
+data Free (SP : Cont) (A : Set) : Set where
+  Var : A → Free SP A
+  Con : ⟦ SP ⟧₀ (Free SP A) → Free SP A
 
 private
   variable
     X Y Z : Set
 
-module _ (FC : Cont) where
+module _ (SP : Cont) where
 
-{-
-  {-# TERMINATING #-}
-  Free₁ : (X → Y) → Free FC X → Free FC Y
-  Free₁ f (Var a) = Var (f a)
-  Free₁ f (Con op) = Con (⟦ FC ⟧₁ (Free₁ f) op)
--}
-
-  Free₁ : (X → Y) → Free FC X → Free FC Y
+  Free₁ : (X → Y) → Free SP X → Free SP Y
   Free₁ f (Var x) = Var (f x)
-  Free₁ f (Con k) = Con (⟦ FC ⟧₁ (Free₁ f) k)
+  Free₁ f (Con k) = Con (⟦ SP ⟧₁ (Free₁ f) k)
   
   Free-id : Free₁ (id {A = X}) ≡ id
   Free-id i (Var x) = Var x
@@ -43,21 +34,21 @@ module _ (FC : Cont) where
   Free₁∘ f g i (Var x) = Var (f (g x))
   Free₁∘ f g i (Con (s , p)) = Con (s , Free₁∘ f g i ∘ p )
   
-  η : (X : Set) → X → Free FC X
+  η : (X : Set) → X → Free SP X
   η X x = Var x
 
-  μ : (X : Set) → Free FC (Free FC X) → Free FC X
+  μ : (X : Set) → Free SP (Free SP X) → Free SP X
   μ X (Var x) = x
   μ X (Con (s , p)) = Con (s , μ X ∘ p)
 
-  idl : μ X ∘ η (Free FC X) ≡ id
+  idl : μ X ∘ η (Free SP X) ≡ id
   idl = refl
 
   idr : μ X ∘ Free₁ (η X) ≡ id
   idr i (Var x) = Var x
   idr i (Con (s , p)) = Con (s , idr i ∘ p)
 
-  xss : μ X ∘ μ (Free FC X) ≡ μ X ∘ Free₁ (μ X)
+  xss : μ X ∘ μ (Free SP X) ≡ μ X ∘ Free₁ (μ X)
   xss i (Var x) = μ _ x
   xss i (Con (s , p)) = Con (s , xss i ∘ p)
 
@@ -70,19 +61,13 @@ module _ (FC : Cont) where
     φη⁻ (Var x , y , eq) = x
     φη⁻ (Con c , y , eq) = _
 
-{-
-data Free (FC : Cont) (A : Set) : Set where
-  Var : A → Free FC A
-  Con  : ⟦ FC ⟧ (Free FC A) → Free FC A
--}
+data FreeS (SP : Cont) : Set where
+  Var : FreeS SP
+  Con : ⟦ SP ⟧₀ (FreeS SP) → FreeS SP
 
-data FreeS (FC : Cont) : Set where
-  Var : FreeS FC
-  Con : ⟦ FC ⟧ (FreeS FC) → FreeS FC
-
-FreeP : (FC : Cont) → FreeS FC → Set
-FreeP FC Var = ⊤
+FreeP : (SP : Cont) → FreeS SP → Set
+FreeP SP Var = ⊤
 FreeP (S ◃ P) (Con (s , p)) = Σ[ q ∈ P s ] FreeP (S ◃ P) (p q)
 
 FreeC : Cont → Cont
-FreeC FC = FreeS FC ◃ FreeP FC
+FreeC SP = FreeS SP ◃ FreeP SP

@@ -14,21 +14,23 @@ data _⊢_≡[_]≡_ {X : Set}(F : X → Set) : {x y : X} → F x → x ≡ y �
 
 record CwF : Set₁ where
   field
+    -- Con,Tms are a category
     Con : Set
     Tms : Con → Con → Set
-    -- Con,Tms are a category
     id : {Γ : Con} → Tms Γ Γ
     _∘_ : {Γ Δ Θ : Con} → Tms Δ Θ → Tms Γ Δ → Tms Γ Θ
     idl : ∀ {Γ Δ}{δ : Tms Γ Δ} → id ∘ δ ≡ δ
     idr : ∀ {Γ Δ}{δ : Tms Γ Δ} → δ ∘ id ≡ δ
     ass : ∀ {Γ Δ Θ Ξ}{ξ : Tms Θ Ξ}{θ : Tms Δ Θ}{δ : Tms Γ Δ}
           → (ξ ∘ θ) ∘ δ ≡ ξ ∘ (θ ∘ δ)
+          
     -- Ty is a presheaf
     Ty : Con → Set
     _[_]T : ∀ {Γ Δ} → Ty Γ → Tms Δ Γ → Ty Δ
     [id]T : ∀ {Γ}{A : Ty Γ} → (A [ id ]T) ≡ A
     [∘]T : ∀ {Γ Δ Θ}{A : Ty Θ}{θ : Tms Δ Θ}{δ : Tms Γ Δ} →
-            A [ θ ∘ δ ]T ≡ A [ θ ]T [ δ ]T 
+            A [ θ ∘ δ ]T ≡ A [ θ ]T [ δ ]T
+            
     -- Tm is a dependent presheaf over Ty
     -- or in other words a presheaf over ∫ Ty 
     Tm : (Γ : Con) → Ty Γ → Set
@@ -36,10 +38,12 @@ record CwF : Set₁ where
     [id]t : ∀ {Γ}{A : Ty Γ}{a : Tm Γ A} → (λ A → Tm Γ A) ⊢ (a [ id {Γ = Γ} ]t) ≡[ [id]T ]≡ a
     [∘]t : ∀ {Γ Δ Θ}{A : Ty Θ}{a : Tm Θ A}{θ : Tms Δ Θ}{δ : Tms Γ Δ}
             → (λ A → Tm Γ A) ⊢ (a [ θ ∘ δ ]t) ≡[ [∘]T ]≡ a [ θ ]t [ δ ]t
+            
     -- empty context
     • : Con
     ε : {Γ : Con} → Tms Γ • 
     •-η : {Γ : Con}{δ : Tms Γ •} → δ ≡ ε
+    
     -- context extension
     _▷_ : (Γ : Con) → Ty Γ → Con
     _,_ : ∀ {Γ Δ A} → (δ : Tms Γ Δ) → Tm Γ (A [ δ ]T) → Tms Γ (Δ ▷ A)    

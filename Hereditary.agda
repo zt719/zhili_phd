@@ -55,7 +55,7 @@ wkTm x (var v) = var (wkv x v)
 wkTm x (lam t) = lam (wkTm (vs x) t)
 wkTm x (app t u) = app (wkTm x t) (wkTm x u)
 
-{- Tmsstitution function -}
+{- Substitution function -}
 
 substVar : Var Γ B → (x : Var Γ A) → Tm (Γ - x) A → Tm (Γ - x) B
 substVar v x u with eq x v
@@ -191,20 +191,16 @@ subVar2nf : Var Γ A → Nfs Δ Γ → Nf Δ A
 subVar2nf vz (γ , t) = t
 subVar2nf (vs x) (γ , t) = subVar2nf x γ
 
-fold : Nf Γ A → Sp Γ A B → Nf Γ B
-fold t ε = t
-fold t (u , us) = fold (napp t u) us
+foldSp : Nf Γ A → Sp Γ A B → Nf Γ B
+foldSp t ε = t
+foldSp t (u , us) = foldSp (napp t u) us
 
 _[_]nf : Nf Γ A → Nfs Δ Γ → Nf Δ A
-
-subNe2nf : Ne Γ A → Nfs Δ Γ → Nf Δ A
 
 _[_]sp : Sp Γ A B → Nfs Δ Γ → Sp Δ A B
 
 lam t [ γ ]nf = lam (t [ γ ↑nf ]nf)
-ne e [ γ ]nf = subNe2nf e γ
-
-subNe2nf (x , ts) γ = fold (subVar2nf x γ) (ts [ γ ]sp)
+ne (x , ts) [ γ ]nf = foldSp (subVar2nf x γ) (ts [ γ ]sp)
 
 ε [ γ ]sp = ε
 (t , ts) [ γ ]sp = (t [ γ ]nf) , (ts [ γ ]sp)

@@ -1,11 +1,9 @@
-{-# OPTIONS --cubical #-}
+{-# OPTIONS --cubical --guardedness #-}
 
 module Cont.HFunc where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit renaming (Unit to ⊤)
-
-{- Categories, Functors, Natural Transformations -}
 
 record Cat (Obj : Type₁) : Type₂ where
   infixr 9 _∘_
@@ -41,29 +39,25 @@ postulate
     → {α β : Nat ℂ 𝔻 F G FF GG}
     → α .Nat.η ≡ β .Nat.η → α ≡ β
 
-{- Syntax -}
-
 infixr 20 _⇒_
 data Ty : Type where
   * : Ty
   _⇒_ : Ty → Ty → Ty
-  
-{- Semantics -}
 
-⟦_⟧T : Ty → Type₁
-⟦ * ⟧T = Type
-⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
+⟦_⟧ : Ty → Type₁
+⟦ * ⟧ = Type
+⟦ A ⇒ B ⟧ = ⟦ A ⟧ → ⟦ B ⟧
 
-⟦_⟧Func : (A : Ty) → ⟦ A ⟧T → Type₁
+isHFunc : {A : Ty} → ⟦ A ⟧ → Type₁
 
-⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧Func)
+⟦_⟧HCat : (A : Ty) → Cat (Σ ⟦ A ⟧ isHFunc)
 
-⟦ * ⟧Func X = Lift ⊤
-⟦ A ⇒ B ⟧Func H =
-  Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧Func F → ⟦ B ⟧Func (H F)) ]
-  Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
+isHFunc {*} X = Lift ⊤
+isHFunc {A ⇒ B} H =
+  Σ[ HH ∈ ((F : ⟦ A ⟧) → isHFunc F → isHFunc (H F)) ]
+  Func ⟦ A ⟧HCat ⟦ B ⟧HCat (λ (F , FF) → H F , HH F FF)
 
-⟦ * ⟧Cat = record
+⟦ * ⟧HCat = record
   { Hom = λ (X , lift tt) (Y , lift tt) → Lift (X → Y)
   ; id = lift (λ x → x)
   ; _∘_ = λ{ (lift f) (lift g) → lift (λ x → f (g x)) }
@@ -71,9 +65,9 @@ data Ty : Type where
   ; idr = λ f → refl
   ; ass = λ f g h → refl
   }
-⟦ A ⇒ B ⟧Cat = record
+⟦ A ⇒ B ⟧HCat = record
   { Hom = λ (F , FF , FFF) (G , GG , GGG)
-    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
+    → Nat ⟦ A ⟧HCat ⟦ B ⟧HCat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
   ; id = record
     { η = λ X → id
     ; nat = λ f → idr _ ∙ sym (idl _)
@@ -88,5 +82,8 @@ data Ty : Type where
   ; ass = λ α β γ → Nat≡ (λ i X → ass (α .η X) (β .η X) (γ .η X) i)
   }
   where
-    open Cat ⟦ B ⟧Cat
+    open Cat ⟦ B ⟧HCat
     open Nat
+
+HFunc : Ty →  Type₁
+HFunc A = Σ ⟦ A ⟧ isHFunc

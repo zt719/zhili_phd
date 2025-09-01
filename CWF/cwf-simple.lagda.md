@@ -7,27 +7,30 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 
 record CwF-simple : Set₁ where
   field
-    Con : Set
-    Ty : Set
-    Tm : Con → Ty → Set
-    Tms : Con → Con → Set
     -- Con,Tms are a category
+    Con : Set
+    Tms : Con → Con → Set
     id : {Γ : Con} → Tms Γ Γ
     _∘_ : {Γ Δ Θ : Con} → Tms Δ Θ → Tms Γ Δ → Tms Γ Θ
     idl : ∀ {Γ Δ}{δ : Tms Γ Δ} → id ∘ δ ≡ δ
     idr : ∀ {Γ Δ}{δ : Tms Γ Δ} → δ ∘ id ≡ δ
     ass : ∀ {Γ Δ Θ Ξ}{ξ : Tms Θ Ξ}{θ : Tms Δ Θ}{δ : Tms Γ Δ}
           → (ξ ∘ θ) ∘ δ ≡ ξ ∘ (θ ∘ δ)
+
+    Ty : Set
+          
     -- Tm _ A is a presheaf
+    Tm : Con → Ty → Set    
     _[_] : ∀ {Γ Δ A} → Tm Γ A → Tms Δ Γ → Tm Δ A
     [id] : ∀ {Γ A}{t : Tm Γ A} →  (t [ id ]) ≡ t
     [∘] : ∀ {Γ Δ Θ}{A : Ty}{t : Tm Θ A}{θ : Tms Δ Θ}{δ : Tms Γ Δ} →
             t [ θ ] [ δ ] ≡ t [ θ ∘ δ ]
-            --  (_[ δ ] ∘ _[ θ ]) = _[ θ ∘ δ ]
+            
     -- empty context
     • : Con
     ε : {Γ : Con} → Tms Γ • 
     •-η : {Γ : Con}{δ : Tms Γ •} → δ ≡ ε
+    
     -- context extension
     _▷_ : Con → Ty → Con
     _,_ : ∀ {Γ Δ A} → Tms Γ Δ → Tm Γ A → Tms Γ (Δ ▷ A)

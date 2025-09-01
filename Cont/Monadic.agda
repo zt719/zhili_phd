@@ -1,4 +1,4 @@
-{-# OPTIONS --cubical #-}
+{-# OPTIONS --cubical --guardedness #-}
 
 module Cont.Monadic where
 
@@ -35,7 +35,7 @@ module _
       → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y)
       → ⟦ S ◃ P ⟧ X
     φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.s = s
-    φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.p = q ∘ transport (cong Q (sym eq-s)) ∘ g⁻ s 
+    φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.k = q ∘ transport (cong Q (sym eq-s)) ∘ g⁻ s 
       where
         eq-s : t ≡ f s
         eq-s = cong ⟦_⟧.s eq
@@ -65,4 +65,4 @@ module _
     where
 
     g⁻ : (s : S) → P s → Q (f s)
-    g⁻ s ps = (φ⁻ (g s) ((f s , id) , (s , id) , refl)) .⟦_⟧.p {!!} --ps
+    g⁻ s ps = (φ⁻ (g s) ((f s , id) , (s , id) , refl)) .⟦_⟧.k {!!} --ps

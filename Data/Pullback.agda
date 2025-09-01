@@ -1,4 +1,4 @@
-{-# OPTIONS --cubical #-}
+{-# OPTIONS --cubical --guardedness #-}
 module Data.Pullback where
 
 open import Cubical.Foundations.Prelude
