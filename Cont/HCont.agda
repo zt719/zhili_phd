@@ -65,8 +65,8 @@ data Sp where
   
 variable ts us ws : Sp Γ A B
 
-app : Nf Γ (A ⇒ B) → Nf (Γ ▹ A) B
-app (lam t) = t
+ap : Nf Γ (A ⇒ B) → Nf (Γ ▹ A) B
+ap (lam t) = t
 
 en : Nf Γ * → Ne Γ *
 en (ne spr) = spr
@@ -222,7 +222,7 @@ _⊎nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S' ◃ P' ◃ R
   R' x (inj₂ t) q = L x t q
 
 Πnf : (I : Set) → (I → Nf Γ A) → Nf Γ A
-Πnf {Γ} {A ⇒ B} I ts = lam (Πnf I (λ i → app (ts i)))
+Πnf {Γ} {A ⇒ B} I ts = lam (Πnf I (λ i → ap (ts i)))
 Πnf {Γ} {*} I ts = ne (S ◃ P ◃ R)
   where
   S : Set
@@ -235,7 +235,7 @@ _⊎nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S' ◃ P' ◃ R
   R x f (i , p) = en (ts i) .Ne.R x (f i) p
 
 Σnf : (I : Set) → (I → Nf Γ A) → Nf Γ A
-Σnf {Γ} {A ⇒ B} I ts = lam (Σnf I (λ i → app (ts i)))
+Σnf {Γ} {A ⇒ B} I ts = lam (Σnf I (λ i → ap (ts i)))
 Σnf {Γ} {*} I ts = ne (S ◃ P ◃ R)
   where
   S : Set
@@ -524,6 +524,13 @@ app[]nf {t = lam t} = refl
 data Tm : Con → Ty → Set₁ where
   var : Var Γ A → Tm Γ A
   lam : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
-  _$_ : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
+  app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
   Πtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
   Σtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
+
+nf : Tm Γ A → Nf Γ A
+nf (var x) = nvar x
+nf (lam t) = lam (nf t)
+nf (app t u) = napp (nf t) (nf u)
+nf (Πtm I t⃗) = Πnf I (nf ∘ t⃗)
+nf (Σtm I t⃗) = Σnf I (nf ∘ t⃗)

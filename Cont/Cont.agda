@@ -1,5 +1,3 @@
-{-# OPTIONS --cubical-compatible #-}
-
 module Cont.Cont where
 
 open import Data.Empty

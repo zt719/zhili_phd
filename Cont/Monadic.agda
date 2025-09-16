@@ -1,15 +1,31 @@
-{-# OPTIONS --cubical --guardedness #-}
-
 module Cont.Monadic where
 
 open import Function.Base
 
-open import Cubical.Foundations.Prelude
-open import Cubical.Foundations.Isomorphism
-  renaming (Iso to _≅_)
-
 open import Cont.Cont
-open import Data.Pullback
+
+open import Level
+open import Data.Product
+open import Relation.Binary.PropositionalEquality
+
+pullback
+  : ∀ {ℓ ℓ' ℓ''} {A : Set ℓ} {B : Set ℓ'} {C : Set ℓ''}
+  → (f : A → C) (g : B → C) → Set (ℓ ⊔ ℓ' ⊔ ℓ'')
+pullback f g =  Σ[ a ∈ _ ] Σ[ b ∈ _ ] (f a ≡ g b)
+
+{- h : X → Y
+
+              ⟦ f ◃ g ⟧ X
+  ⟦ S ◃ P ⟧ X    →      ⟦ T ◃ Q ⟧ X
+
+
+   ↓ ⟦ S ◃ P ⟧ h          ↓ ⟦ T ◃ Q ⟧ h
+
+              ⟦ f ◃ g ⟧ Y
+  ⟦ S ◃ P ⟧ Y    →      ⟦ T ◃ Q ⟧ Y
+-}
+
+record MCont : Set₁ where
 
 module _ 
   (S : Set)
@@ -21,10 +37,10 @@ module _
   where
 
   φ : {X Y : Set} (k : X → Y)
-    → ⟦ S ◃ P ⟧ X
-    → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y)
+    → ⟦ S ◃ P ⟧ X → pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y)
   φ k (s , p) = (f s , p ∘ g s) , (s , k ∘ p) , refl
 
+{-
   module _
     {g⁻ : (s : S) → P s → Q (f s)}
     {g∘g⁻ : (s : S) → g s ∘ g⁻ s ≡ id}
@@ -32,7 +48,7 @@ module _
     where
 
     φ⁻ : {X Y : Set} (k : X → Y)
-      → Pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y)
+      → pullback (⟦ T ◃ Q ⟧₁ k) (⟦ f ◃ g ⟧Hom Y)
       → ⟦ S ◃ P ⟧ X
     φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.s = s
     φ⁻ k ((t , q) , (s , p) , eq) .⟦_⟧.k = q ∘ transport (cong Q (sym eq-s)) ∘ g⁻ s 
@@ -66,3 +82,4 @@ module _
 
     g⁻ : (s : S) → P s → Q (f s)
     g⁻ s ps = (φ⁻ (g s) ((f s , id) , (s , id) , refl)) .⟦_⟧.k {!!} --ps
+-}

@@ -3,150 +3,89 @@
 module Cont.HContCubical where
 
 open import Cubical.Foundations.Prelude hiding (J)
-open import Cubical.Data.Empty
 open import Cubical.Data.Unit renaming (Unit to ⊤)
+open import Cubical.Data.Empty
 open import Cubical.Data.Sigma
-
-open import Agda.Primitive
-
-{- Syntax -}
-
-{- Ty & Con & Var -}
+open import Cubical.Data.Sum
+  
+{- Types & Contexts & Variables -}
 
 infixr 20 _⇒_
-data Ty : Set where
+data Ty : Type where
   * : Ty
   _⇒_ : Ty → Ty → Ty
+  TyIsSet : isSet Ty
 
-private variable A B C : Ty
+variable  A B C : Ty
 
 infixl 5 _▹_
-data Con : Set where
-  •   : Con
+data Con : Type where
+  ∙   : Con
   _▹_ : Con → Ty → Con
 
-private variable Γ Δ : Con
+variable  Γ Δ Θ : Con
 
-data Var : Con → Ty → Set where
+ConIsSet : isSet Con
+ConIsSet ∙ ∙ p q = {!!}
+ConIsSet ∙ (y ▹ x) p q = {!!}
+ConIsSet (x ▹ x₁) ∙ p q = {!!}
+ConIsSet (x ▹ x₁) (y ▹ x₂) p q = {!!}
+
+data Var : Con → Ty → Type where
   vz : Var (Γ ▹ A) A
   vs : Var Γ A → Var (Γ ▹ B) A
 
-private variable x y : Var Γ A
+variable x y : Var Γ A
 
-{- Object -}
+{- Normal Forms -}
 
-data Nf : Con → Ty → Set₁
+infixr 4 _,_
 
-record Ne (Γ : Con) (B : Ty) : Set₁
+data Nf : Con → Ty → Type₁
 
-data Sp : Con → Ty → Ty → Set₁
+record Ne (Γ : Con) (B : Ty) : Type₁
+
+data Sp : Con → Ty → Ty → Type₁
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
   ne  : Ne Γ * → Nf Γ *
+  NfIsSet : ∀ {Γ A} → isSet (Nf Γ A)
 
-private variable t u w : Nf Γ A
+variable t u w : Nf Γ A
 
 record Ne Γ B where
+  constructor _◃_◃_
   inductive
   field
-    S : Set
-    P : Var Γ A → S → Set
+    S : Type
+    P : Var Γ A → S → Type
     R : (x : Var Γ A) (s : S) → P x s → Sp Γ A B
+    SIsSet : isSet S
+    PIsSet : {A : Ty} {x : Var Γ A} {s : S} → isSet (P x s)
 
-private variable n m l : Ne Γ A
+variable spr tql : Ne Γ A
 
 data Sp where
   ε   : Sp Γ A A
   _,_ : Nf Γ A → Sp Γ B C → Sp Γ (A ⇒ B) C
+  SpIsSet : ∀ {Γ A B} → isSet (Sp Γ A B)
+  
+variable ts us ws : Sp Γ A B
 
-private variable ts us ws : Sp Γ A B
-
-HCont : Ty → Set₁
-HCont A = Nf • A
-
-private variable H J K : HCont A
-
-{- Morphism -}
-
-data NfHom : {Γ : Con} {A : Ty} (t u : Nf Γ A) → Set₁
-
-record NeHom (n m : Ne Γ A) : Set₁
-
-data SpHom : {Γ : Con} {A B : Ty} (t u : Sp Γ A B) → Set₁
-
-data NfHom where
-  lam : NfHom t u → NfHom (lam t) (lam u)
-  ne  : NeHom n m → NfHom (ne n) (ne m)
-
-data SpHom where
-  ε   : SpHom {Γ} {A} ε ε
-  _,_ : NfHom t u → SpHom ts us → SpHom (t , ts) (u , us)
- 
-record NeHom {Γ} {B} n m where
-  inductive
-  open Ne
-  field
-    f : n .S → m .S
-    g : (x : Var Γ A) (s : n .S) → m .P x (f s) → n .P x s
-    h : (x : Var Γ A) (s : n .S) (p : m .P x (f s))
-      → SpHom (n .R x s (g x s p)) (m .R x (f s) p)
-
-HContHom : HCont A → HCont A → Set₁
-HContHom = NfHom {•}
-
-idNfHom : NfHom t t
-idNeHom : NeHom n n
-idSpHom : SpHom ts ts
-
-idNfHom {t = lam t} = lam idNfHom
-idNfHom {t = ne x} = ne idNeHom
-
-idNeHom = record { f = λ s → s ; g = λ x s p → p ; h = λ x s p → idSpHom }
-
-idSpHom {ts = ε} = ε
-idSpHom {ts = t , ts} = idNfHom , idSpHom
-
-idHContHom : HContHom H H
-idHContHom = idNfHom
-
-∘NfHom : NfHom u w → NfHom t u → NfHom t w
-∘NeHom : NeHom m l → NeHom n m → NeHom n l
-∘SpHom : SpHom us ws → SpHom ts us → SpHom ts ws
-
-∘NfHom (lam α) (lam β) = lam (∘NfHom α β)
-∘NfHom (ne e) (ne e') = ne (∘NeHom e e')
-
-∘NeHom record { f = f ; g = g ; h = h }
-  record { f = f₁ ; g = g₁ ; h = h₁ }
-  = record
-  { f = λ x → f (f₁ x)
-  ; g = λ x s p → g₁ x s (g x (f₁ s) p)
-  ; h = λ x s p → ∘SpHom (h x (f₁ s) p) (h₁ x s (g x (f₁ s) p))
-  }
-
-∘SpHom ε ε = ε
-∘SpHom (t , ts) (u , us) = ∘NfHom t u , ∘SpHom ts us
-
-∘HContHom : HContHom J K → HContHom H J → HContHom H K
-∘HContHom = ∘NfHom
 
 {-
-idl-NfHom : (α : NfHom t u) → ∘NfHom α idNfHom ≡ α
-idl-NeHom : (e : NeHom n m) → ∘NeHom e idNeHom ≡ e
 
-idl-NfHom α i = {!!}
-idl-NeHom = {!!}
+ap : Nf Γ (A ⇒ B) → Nf (Γ ▹ A) B
+ap {Γ} {A} {B} x = {!!}
 
-idl-HContHom : (α : HContHom H J) → ∘HContHom α idHContHom ≡ α
-idl-HContHom (lam α) i = lam (idl-NfHom α i)
-idl-HContHom (ne x) = {!!}
--}
+en : Nf Γ * → Ne Γ *
+en (ne spr) = spr
 
-{- Weakening -}
+{- Variable Weakening & (Heterogeneous) Equality -}
 
 _-_ : (Γ : Con) → Var Γ A → Con
-• - ()
+∙ - ()
 (Γ ▹ A) - vz = Γ
 (Γ ▹ A) - (vs x) = (Γ - x) ▹ A
 
@@ -155,9 +94,7 @@ wkv vz y = vs y
 wkv (vs x) vz = vz
 wkv (vs x) (vs y) = vs (wkv x y)
 
-{- Variable (Heterogeneous) Equality -}
-
-data EqVar : Var Γ A → Var Γ B → Set where
+data EqVar : Var Γ A → Var Γ B → Type where
   same : EqVar x x
   diff : (x : Var Γ A) (y : Var (Γ - x) B) → EqVar x (wkv x y)
 
@@ -166,22 +103,22 @@ eq vz vz = same
 eq vz (vs y) = diff vz y
 eq (vs x) vz = diff (vs x) vz
 eq (vs x) (vs y) with eq x y
-eq (vs x) (vs .x)          | same = same
+eq (vs x) (vs .x)            | same = same
 eq (vs x) (vs .(wkv x y')) | diff .x y' = diff (vs x) (vs y')
 
-{- Weakening Nf -}
-
+{- Normal Forms Weakening -}
 wkNf : (x : Var Γ A) → Nf (Γ - x) B → Nf Γ B
+
 wkNe : (x : Var Γ A) → Ne (Γ - x) B → Ne Γ B
+
 wkSp : (x : Var Γ A) → Sp (Γ - x) B C → Sp Γ B C
 
 wkNf x (lam t) = lam (wkNf (vs x) t)
-wkNf x (ne e) = ne (wkNe x e)
+wkNf x (ne spr) = ne (wkNe x spr)
 
-wkNe {Γ} {A} {C} x record { S = S ; P = P ; R = R }
-  = record { S = S ; P = P' ; R = R' }
+wkNe {Γ} {A} {C} x (S ◃ P ◃ R) = S ◃ P' ◃ R'
   where
-  P' : Var Γ B → S → Set
+  P' : Var Γ B → S → Type
   P' y  s with eq x y
   P' .x s | same = ⊥
   P' y  s | diff .x y' = P y' s
@@ -191,44 +128,24 @@ wkNe {Γ} {A} {C} x record { S = S ; P = P ; R = R }
   R' y s p | diff .x y' = wkSp x (R y' s p)
 
 wkSp x ε = ε
-wkSp x (n , ns) = wkNf x n , wkSp x ns
-
-wkNfHom : (x : Var Γ A) {t u : Nf (Γ - x) B} → NfHom t u → NfHom (wkNf x t) (wkNf x u)
-wkNeHom : (x : Var Γ A) {n m : Ne (Γ - x) B} → NeHom n m → NeHom (wkNe x n) (wkNe x m)
-wkSpHom : (x : Var Γ A) {ts us : Sp (Γ - x) B C} → SpHom ts us → SpHom (wkSp x ts) (wkSp x us)
-
-wkNfHom x (lam α) = lam (wkNfHom (vs x) α)
-wkNfHom x (ne e) = ne (wkNeHom x e)
-
-wkNeHom x = {!!}
-{-
-wkNeHom {Γ} {A} {B} x {n} {m} record { f = f ; g = g ; h = h }
-  = record { f = f ; g = {!!} ; h = {!!} }
-  where
--}
-
-
-wkSpHom x ε = ε
-wkSpHom x (α , αs) = wkNfHom x α , wkSpHom x αs
-
-{- Auxiliary functions -}
-
-appSp : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
-appSp ε u = u , ε
-appSp (n , ns) u = n , appSp ns u
+wkSp x (t , ts) = wkNf x t , wkSp x ts
 
 {- η-expansion -}
 
+spSnoc : Sp Γ A (B ⇒ C) → Nf Γ B → Sp Γ A C
+spSnoc ε u = u , ε
+spSnoc (t , ts) u = t , spSnoc ts u
+
 nvar : Var Γ A → Nf Γ A
+
 ne2nf : Ne Γ A → Nf Γ A
 
-nvar {Γ} {B} x =
-  ne2nf (record { S = S ; P = P ; R = R })
+nvar {Γ} {B} x = ne2nf (S ◃ P ◃ R)
   where
-  S : Set
+  S : Type
   S = ⊤
 
-  P : Var Γ A → S → Set
+  P : Var Γ A → S → Type
   P y  tt with eq x y
   P .x tt | same = ⊤
   P y  tt | diff .x y' = ⊥
@@ -236,18 +153,18 @@ nvar {Γ} {B} x =
   R : (y : Var Γ A) (s : S) → P y s → Sp Γ A B
   R y tt p with eq x y
   R .x tt p | same = ε
+  R y tt () | diff .x y'
 
-ne2nf {Γ} {*} x = ne x
-ne2nf {Γ} {A ⇒ C} record { S = S ; P = P ; R = R } =
-  lam (ne2nf (record { S = S ; P = P' ; R = R' }))
+ne2nf {Γ} {*} spr = ne spr
+ne2nf {Γ} {A ⇒ C} (S ◃ P ◃ R) = lam (ne2nf (S ◃ P' ◃ R'))
   where
-  P' : Var (Γ ▹ A) B → S → Set
+  P' : Var (Γ ▹ A) B → S → Type
   P' vz s = ⊥
   P' (vs x) s = P x s
 
   R' : (x : Var (Γ ▹ A) B) (s : S) → P' x s → Sp (Γ ▹ A) B C
   R' vz s ()
-  R' (vs x) s p = appSp (wkSp vz (R x s p)) (nvar vz)
+  R' (vs x) s p = spSnoc (wkSp vz (R x s p)) (nvar vz)
 
 {- Normalization -}
 
@@ -259,16 +176,15 @@ _◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 
 napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
 
-(lam t) [ x := u ] = lam (t [ vs x := wkNf vz u ])
-(ne {Γ} record { S = S ; P = P ; R = R }) [ x := u ] =
-  ne (record { S = S ; P = P' ; R = R' })
+lam t [ x := u ] = lam (t [ vs x := wkNf vz u ])
+ne {Γ} (S ◃ P ◃ R) [ x := u ] = ne (S ◃ P' ◃ R')
   where
-  P' : Var (Γ - x) A → S → Set
+  P' : Var (Γ - x) A → S → Type
   P' y s = P (wkv x y) s
-
+  
   R' : (y : Var (Γ - x) A) (s : S) → P' y s → Sp (Γ - x) A *
   R' y s p = R (wkv x y) s p < x := u >
-  
+
 ε < x := u > = ε
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
 
@@ -277,177 +193,358 @@ t ◇ (u , us) = napp t u ◇ us
 
 napp (lam t) u = t [ vz := u ]
 
-_$_ : HCont (A ⇒ B) → HCont A → HCont B
-_$_ = napp
+{-
+{- Algebraic Structures -}
 
-_[_:=_]₁ : (t : Nf Γ B) (x : Var Γ A) {u w : Nf (Γ - x) A}
-  → NfHom u w → NfHom (t [ x := u ]) (t [ x := w ])
+⊤nf : Nf Γ A
+⊤nf {Γ} {*} = ne (⊤ ◃ (λ{ x tt → ⊥ }) ◃ λ{ x tt () })
+⊤nf {Γ} {A ⇒ B} = lam ⊤nf
 
-_<_:=_>₁ : (ts : Sp Γ B C) (x : Var Γ A) {u w : Nf (Γ - x) A}
-  → NfHom u w → SpHom (ts < x := u >) (ts < x := w >)
+⊥nf : Nf Γ A
+⊥nf {Γ} {*} = ne (⊥ ◃ (λ x ()) ◃ (λ x ()))
+⊥nf {Γ} {A ⇒ B} = lam ⊥nf
 
-napp₁ : (t : Nf Γ (A ⇒ B)) → NfHom u w → NfHom (napp t u) (napp t w)
+_×nf_ : Nf Γ A → Nf Γ A → Nf Γ A
+lam t ×nf lam u = lam (t ×nf u)
+_×nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S' ◃ P' ◃ R')
+  where
+  S' : Type
+  S' = S × T
 
-(lam t) [ x := α ]₁ = lam (t [ vs x := wkNfHom vz α ]₁)
-_[_:=_]₁ (ne record { S = S ; P = P ; R = R }) x {u} {w} α = {!!}
---  = ne (record { f = λ s → s ; g = {!!} ; h = {!!} })
+  P' : Var Γ A → S' → Type
+  P' x (s , t) = P x s ⊎ Q x t
 
-ε < x := α >₁ = ε
-(t , ts) < x := α >₁ = (t [ x := α ]₁) , (ts < x := α >₁)
+  R' : (x : Var Γ A) (s : S') → P' x s → Sp Γ A B
+  R' x (s , t) (inj₁ p) = R x s p
+  R' x (s , t) (inj₂ q) = L x t q
 
-napp₁ (lam t) α = t [ vz := α ]₁
+_⊎nf_ : Nf Γ A → Nf Γ A → Nf Γ A
+lam t ⊎nf lam u = lam (t ⊎nf u)
+_⊎nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S' ◃ P' ◃ R')
+  where
+  S' : Type
+  S' = S ⊎ T
 
-_$₁_ : (t : HCont (A ⇒ B)) → HContHom u w → HContHom (t $ u) (t $ w)
-t $₁ α = napp₁ t α
+  P' : Var Γ A → S' → Type
+  P' x (inj₁ s) = P x s
+  P' x (inj₂ t) = Q x t
 
-{- Semantics -}
+  R' : (x : Var Γ A) (s : S') → P' x s → Sp Γ A B
+  R' x (inj₁ s) p = R x s p
+  R' x (inj₂ t) q = L x t q
 
-⟦_⟧T : Ty → Set₁
-⟦ * ⟧T = Set
-⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
+Πnf : (I : Type) → (I → Nf Γ A) → Nf Γ A
+Πnf {Γ} {A ⇒ B} I ts = lam (Πnf I (λ i → ap (ts i)))
+Πnf {Γ} {*} I ts = ne (S ◃ P ◃ R)
+  where
+  S : Type
+  S = (i : I) → en (ts i) .Ne.S
 
-⟦_⟧C : Con → Set₁
-⟦ • ⟧C = Lift ⊤
-⟦ Γ ▹ A ⟧C = ⟦ Γ ⟧C × ⟦ A ⟧T
+  P : Var Γ A → S → Type
+  P x f = Σ[ i ∈ I ] en (ts i) .Ne.P x (f i)
 
-⟦_⟧v : Var Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
-⟦ vz ⟧v (γ , a) = a
-⟦ vs x ⟧v (γ , a) = ⟦ x ⟧v γ
+  R : (x : Var Γ A) (s : S) → P x s → Sp Γ A *
+  R x f (i , p) = en (ts i) .Ne.R x (f i) p
 
-⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧C → ⟦ A ⟧T
+Σnf : (I : Type) → (I → Nf Γ A) → Nf Γ A
+Σnf {Γ} {A ⇒ B} I ts = lam (Σnf I (λ i → ap (ts i)))
+Σnf {Γ} {*} I ts = ne (S ◃ P ◃ R)
+  where
+  S : Type
+  S = Σ[ i ∈ I ] en (ts i) .Ne.S
 
-⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧C → Set
+  P : Var Γ A → S → Type
+  P x (i , s) = en (ts i) .Ne.P x s
 
-⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧C → ⟦ A ⟧T → ⟦ B ⟧T
+  R : (x : Var Γ A) (s : S) → P x s → Sp Γ A *
+  R x (i , s) p = en (ts i) .Ne.R x s p
 
-⟦ lam x ⟧nf γ a = ⟦ x ⟧nf (γ , a)
-⟦ ne x ⟧nf γ = ⟦ x ⟧ne γ
+infix 2 Σnf-syntax
+Σnf-syntax : (I : Type) → (I → Nf Γ A) → Nf Γ A
+Σnf-syntax = Πnf
+syntax Σnf-syntax A (λ x → B) = Σnf[ x ∈ A ] B
 
-⟦_⟧ne {Γ} record { S = S ; P = P ; R = R } γ =
-  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P x s) → ⟦ R x s p ⟧sp γ (⟦ x ⟧v γ))
+infix 2 Πnf-syntax
+Πnf-syntax : (I : Type) → (I → Nf Γ A) → Nf Γ A
+Πnf-syntax = Πnf
+syntax Πnf-syntax A (λ x → B) = Πnf[ x ∈ A ] B
 
-⟦ ε ⟧sp γ a = a
-⟦ ns , n ⟧sp γ f = ⟦ n ⟧sp γ (f (⟦ ns ⟧nf γ))
+{- Morphisms -}
 
-⟦_⟧ : HCont A → ⟦ A ⟧T
-⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
+data NfHom : Nf Γ A → Nf Γ A → Type₁
 
+record NeHom {Γ} {B} (spr tql : Ne Γ B) : Type₁
+
+data SpHom : Sp Γ A B → Sp Γ A B → Type₁
+
+data NfHom where
+  lam : NfHom t u → NfHom (lam t) (lam u)
+  ne  : NeHom spr tql → NfHom (ne spr) (ne tql)
+
+record NeHom {Γ} {B} spr tql where
+  constructor _◃_◃_
+  inductive
+  open Ne spr
+  open Ne tql renaming (S to T; P to Q; R to L)
+  field
+    f : S → T
+    g : (x : Var Γ A) (s : S) → Q x (f s) → P x s
+    h : (x : Var Γ A) (s : S) (q : Q x (f s))
+      → SpHom (R x s (g x s q)) (L x (f s) q)
+       
+data SpHom where
+  ε   : SpHom ts ts
+  _,_ : NfHom t u → SpHom ts us → SpHom (t , ts) (u , us)
+
+idNfHom : NfHom t t
+idNfHom {t = ne spr} = ne (id ◃ (λ x s → id) ◃ λ x s q → ε)
+idNfHom {t = lam t} = lam (idNfHom {t = t})
+
+_∘nfHom_ : NfHom u w → NfHom t u → NfHom t w
+_∘spHom_ : SpHom us ws → SpHom ts us → SpHom ts ws
+
+lam f ∘nfHom lam g = lam (f ∘nfHom g)
+ne (f ◃ g ◃ h) ∘nfHom ne (f' ◃ g' ◃ h') = ne (
+  (f ∘ f')
+  ◃ (λ x s → g' x s ∘ g x (f' s))
+  ◃ λ x s q → (h x (f' s) q) ∘spHom h' x s (g x (f' s) q)
+  )
+
+ε ∘spHom ε = ε
+ε ∘spHom (g , gs) = g , gs
+(f , fs) ∘spHom ε = f , fs
+(f , fs) ∘spHom (g , gs) = (f ∘nfHom g) , (fs ∘spHom gs)
+
+
+!nf : (t : Nf Γ A) → NfHom t ⊤nf
+!nf (lam t) = lam (!nf t)
+!nf (ne (S ◃ P ◃ R)) = ne ((λ _ → tt) ◃ (λ x s ()) ◃ λ x s ())
+
+¿nf : (t : Nf Γ A) → NfHom ⊥nf t
+¿nf (lam t) = lam (¿nf t)
+¿nf (ne (S ◃ P ◃ R)) = ne ((λ ()) ◃ (λ x ()) ◃ λ x ())
+
+π₁nf : (t u : Nf Γ A) → NfHom (t ×nf u) t
+π₁nf (lam t) (lam u) = lam (π₁nf t u)
+π₁nf {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
+  where
+  f : S × T → S
+  f (s , t) = s
+
+  g : (x : Var Γ A) (st : S × T) → P x (f st) → P x (st .proj₁) ⊎ Q x (st .proj₂)
+  g x (s , t) p = inj₁ p
+
+  h : (x : Var Γ A) (st : S × T) (q : P x (f st)) → SpHom (R x (f st) q) (R x (f st) q)
+  h x (s , t) q = ε
+
+i₁nf : (t u : Nf Γ A) → NfHom t (t ⊎nf u)
+i₁nf (lam t) (lam u) = lam (i₁nf t u)
+i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
+  where
+  f : S → S ⊎ T
+  f s = inj₁ s
+
+  g : (x : Var Γ A) (s : S) → P x s → P x s
+  g x s p = p
+
+  h : (x : Var Γ A) (s : S) (q : P x s) → SpHom (R x s (g x s q)) (R x s q)
+  h x s q = ε
+
+<_,_>nf : NfHom t u → NfHom t w → NfHom t (u ×nf w)
+< lam tu , lam tv >nf = lam < tu , tv >nf
+<_,_>nf {Γ} {B} (ne (f₁ ◃ g₁ ◃ h₁)) (ne (f₂ ◃ g₂ ◃ h₂)) = ne (ff ◃ gg ◃ hh)
+  where
+  ff : _
+  ff = < f₁ , f₂ >
+
+  gg : (x : Var Γ A) (s : _) → _
+  gg x s (inj₁ q₁) = g₁ x s q₁
+  gg x s (inj₂ q₂) = g₂ x s q₂
+
+  hh : (x : Var Γ A) (s : _) (q : _) → _
+  hh x s (inj₁ q₁) = h₁ x s q₁
+  hh x s (inj₂ q₂) = h₂ x s q₂
+
+[_,_]nf : NfHom t w → NfHom u w → NfHom (t ⊎nf u) w
+[ lam tv , lam uv ]nf = lam [ tv , uv ]nf
+[_,_]nf {Γ} {B} (ne (f₁ ◃ g₁ ◃ h₁)) (ne (f₂ ◃ g₂ ◃ h₂)) = ne (ff ◃ gg ◃ hh)
+  where
+  ff : _
+  ff = [ f₁ , f₂ ]
+
+  gg : (x : Var Γ A) (s : _) → _
+  gg x (inj₁ s₁) q₁ = g₁ x s₁ q₁
+  gg x (inj₂ s₂) q₂ = g₂ x s₂ q₂
+
+  hh : (x : Var Γ A) (s : _) (q : _) → _
+  hh x (inj₁ s₁) q₁ = h₁ x s₁ q₁
+  hh x (inj₂ s₂) q₂ = h₂ x s₂ q₂
+
+{- Simply Typed Categories with Families -}
+
+data Nfs : Con → Con → Type₁ where
+  ε   : Nfs Γ ∙
+  _,_ : Nfs Δ Γ → Nf Δ A → Nfs Δ (Γ ▹ A)
+
+variable γ δ θ : Nfs Δ Γ
+
+wkNfs : (x : Var Δ A) → Nfs (Δ - x) Γ → Nfs Δ Γ
+wkNfs x ε = ε
+wkNfs x (γ , t) = wkNfs x γ , wkNf x t
+
+_↑ : Nfs Δ Γ → Nfs (Δ ▹ A) (Γ ▹ A)
+γ ↑ = wkNfs vz γ , nvar vz
+
+subVar : Var Γ A → Nfs Δ Γ → Nf Δ A
+subVar vz (γ , t) = t
+subVar (vs x) (γ , t) = subVar x γ
+
+appSp : Nf Γ A → Sp Γ A B → Nf Γ B
+appSp t ε = t
+appSp t (u , us) = appSp (napp t u) us
+
+_[_]nf : Nf Γ A → Nfs Δ Γ → Nf Δ A
+
+_[_]sp : Sp Γ A B → Nfs Δ Γ → Sp Δ A B
+
+lam t [ γ ]nf = lam (t [ γ ↑ ]nf)
+ne (S ◃ P ◃ R) [ γ ]nf = Σnf[ s ∈ S ]
+  Πnf[ A ∈ Ty ] Πnf[ x ∈ Var _ A ] Πnf[ p ∈ P x s ]
+  appSp (subVar x γ) (R x s p [ γ ]sp)
+
+ε [ γ ]sp = ε
+(t , ts) [ γ ]sp = (t [ γ ]nf) , (ts [ γ ]sp)
+
+idNfs : Nfs Γ Γ
+idNfs {∙} = ε
+idNfs {Γ ▹ A} = idNfs ↑
+
+_∘nfs_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
+ε ∘nfs γ = ε
+(δ , t) ∘nfs γ = (δ ∘nfs γ) , (t [ γ ]nf)
+
+π₁ : Nfs Δ (Γ ▹ A) → Nfs Δ Γ
+π₁ (γ , t) = γ
+
+π₂ : Nfs Δ (Γ ▹ A) → Nf Δ A
+π₂ (γ , t) = t
+
+wk : Nfs (Γ ▹ A) Γ
+wk = π₁ idNfs
+
+nvz : Nf (Γ ▹ A) A
+nvz = π₂ idNfs
+
+nvs : Nf Γ A → Nf (Γ ▹ B) A
+nvs t = t [ wk ]nf
+
+<_> : Nf Γ A → Nfs Γ (Γ ▹ A)
+< t > = idNfs , t
+
+π₁β : π₁ (γ , t) ≡ γ
+π₁β = refl
+
+π₂β : π₂ (γ , t) ≡ t
+π₂β = refl
+
+πη : (π₁ γ , π₂ γ) ≡ γ
+πη {γ = γ , t} = refl
+
+,∘ : (γ , t) ∘nfs δ ≡ (γ ∘nfs δ , t [ δ ]nf)
+,∘ = refl
 
 {-
-⟦_⟧NfHom : {t u : Nf Γ A} → NfHom t u → (γ : ⟦ Γ ⟧C) → Set₁
-⟦_⟧NfHom {Γ} {*} {t} {u} α γ = Lift (suc zero) (⟦ t ⟧nf γ → ⟦ u ⟧nf γ)
-⟦_⟧NfHom {Γ} {A ⇒ B} {t} {u} (lam α) γ = (a : ⟦ A ⟧T) → ⟦ α ⟧NfHom (γ , a)
+[id]nf : t [ id ]nf ≡ t
+[id]nf {t = lam t} = cong lam [id]nf
+[id]nf {Γ} {t = ne (S ◃ P ◃ R)} = {!!}
 
-⟦_⟧Hom : {A : Ty} {t u : HCont A} (α : HContHom t u) → Set₁
-⟦_⟧Hom = {!!}
+↑dis : _↑ {Δ} {Γ} {A} (δ ∘ γ) ≡ ((δ ↑) ∘ (γ ↑))
+↑dis {Δ} {Γ} {A} {δ = ε} {γ = γ} = {!!}
+↑dis {δ = δ , x} {γ = γ} = {!!}
+
+[∘]nf : t [ δ ∘ γ ]nf ≡ t [ δ ]nf [ γ ]nf
+[∘]nf {t = lam t} = cong lam (trans {!!} {!!})
+[∘]nf {t = ne x} = {!!}
+
+nvz[] : nvz [ (γ , t) ]nf ≡ t
+nvz[] {γ = γ} {t = t} = {!!}
+
+nvs[] : nvs t [ (γ , u) ]nf ≡ t [ γ ]nf
+nvs[] = {!!}
+
+idl : id ∘ γ ≡ γ
+idl {γ = ε} = refl
+idl {γ = γ , t} = cong₂ _,_ {!!} nvz[]
+
+idr : γ ∘ id ≡ γ
+idr {γ = ε} = refl
+idr {γ = γ , t} = cong₂ _,_ idr [id]nf
+
+ass : (θ ∘ δ) ∘ γ ≡ θ ∘ (δ ∘ γ)
+ass {θ = ε} = refl
+ass {θ = θ , t} = cong₂ _,_ ass (sym ([∘]nf {t = t}))
+
+⇒β : app (lam t) ≡ t
+⇒β = refl
+
+⇒η : lam (app t) ≡ t
+⇒η {t = lam t} = refl
+
+↑≡ : γ ↑ ≡ (γ ∘ π₁ {A = A} id , π₂ id)
+↑≡ {γ = ε} = refl
+↑≡ {γ = γ , t} = cong₂ _,_ (cong₂ _,_ {!!} {!!}) refl
+
+lam[]nf : lam t [ γ ]nf ≡ lam (t [ γ ↑ ]nf)
+lam[]nf = refl
+
+app[]nf : app (t [ γ ]nf) ≡ app t [ γ ↑ ]nf
+app[]nf {t = lam t} = refl
 -}
 
+{-- Semantics --}
 
-{-
-dom : Ty → Con
-dom * = •
-dom (A ⇒ B) = dom B ▹ A
+{- Normal Form Functors -}
 
-appDom : ⟦ A ⟧T → ⟦ dom A ⟧C → Set
-appDom {*} a (lift tt) = a
-appDom {A ⇒ B} f (γ , a) = appDom (f a) γ
+⟦_⟧t : Ty → Type₁
+⟦ * ⟧t = Type
+⟦ A ⇒ B ⟧t = ⟦ A ⟧t → ⟦ B ⟧t
 
-⟦_⟧nfHom : {t u : Nf Γ A} → NfHom t u → (γ : ⟦ Γ ⟧C) (δ : ⟦ dom A ⟧C)
-  → appDom (⟦ t ⟧nf γ) δ → appDom (⟦ u ⟧nf γ) δ
-  
-⟦_⟧neHom : {m n : Ne Γ *} → NeHom m n → (γ : ⟦ Γ ⟧C)
-  → ⟦ m ⟧ne γ → ⟦ n ⟧ne γ
+⟦_⟧c : Con → Type₁
+⟦ ∙ ⟧c = Lift (lsuc lzero) ⊤
+⟦ Γ ▹ A ⟧c = ⟦ Γ ⟧c × ⟦ A ⟧t
 
-⟦_⟧spHom : {ts us : Sp Γ A B} → SpHom ts us → (γ : ⟦ Γ ⟧C) (a : ⟦ A ⟧T) (δ : ⟦ dom B ⟧C)
-  → appDom (⟦ ts ⟧sp γ a) δ → appDom (⟦ us ⟧sp γ a) δ
+⟦_⟧v : Var Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
+⟦ vz ⟧v (as , a) = a
+⟦ vs x ⟧v (as , a) = ⟦ x ⟧v as
 
-⟦ lam α ⟧nfHom γ (δ , a) = ⟦ α ⟧nfHom (γ , a) δ
-⟦ ne e ⟧nfHom γ (lift tt) = ⟦ e ⟧neHom γ
+⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
 
-⟦ record { f = f ; g = g ; h = h } ⟧neHom γ (s , k)
-  = f s , λ x p → ⟦ h x s p ⟧spHom γ (⟦ x ⟧v γ) (lift tt) (k x (g x s p))
+⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧c → Type
 
-⟦ ε ⟧spHom γ a δ x = x
-⟦ α , αs ⟧spHom γ f δ x = {!!}
+⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧c → ⟦ A ⟧t → ⟦ B ⟧t
 
-⟦_⟧Hom : {H J : HCont A} → HContHom H J
-  → (γ : ⟦ dom A ⟧C) → appDom ⟦ H ⟧ γ → appDom ⟦ J ⟧ γ
-⟦ α ⟧Hom γ = ⟦ α ⟧nfHom (lift tt) γ
+⟦ lam t ⟧nf as a = ⟦ t ⟧nf (as , a)
+⟦ ne spr ⟧nf as = ⟦ spr ⟧ne as
 
-{-
-⟦_⟧₁ : (H : HCont ((* ⇒ *) ⇒ (* ⇒ *)))
-  → {F G : HCont (* ⇒ *)} (α : HContHom F G)
-  → {X Y : HCont *} (f : HContHom X Y)
-  → ⟦ H ⟧ ⟦ F ⟧ ⟦ X ⟧ → ⟦ H ⟧ ⟦ G ⟧ ⟦ Y ⟧
-⟦ lam (lam (ne record { S = S ; P = P ; R = R })) ⟧₁ {F} {G} α {X} {Y} f (s , k)
-  = s , λ{ vz p → {!!} ; (vs vz) p → {!!} }
+⟦_⟧ne {Γ} (S ◃ P ◃ R) as =
+  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P x s)
+  → ⟦ R x s p ⟧sp as (⟦ x ⟧v as))
+
+⟦ ε ⟧sp as a = a
+⟦ t , ts ⟧sp as f = ⟦ ts ⟧sp as (f (⟦ t ⟧nf as))
+
+data Tm : Con → Ty → Type₁ where
+  var : Var Γ A → Tm Γ A
+  lam : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
+  app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
+  Πtm : (I : Type) → (I → Tm Γ A) → Tm Γ A
+  Σtm : (I : Type) → (I → Tm Γ A) → Tm Γ A
+
+nf : Tm Γ A → Nf Γ A
+nf (var x) = nvar x
+nf (lam t) = lam (nf t)
+nf (app t u) = napp (nf t) (nf u)
+nf (Πtm I t⃗) = Πnf I (nf ∘ t⃗)
+nf (Σtm I t⃗) = Σnf I (nf ∘ t⃗)
 -}
--}
-
-{- Categories, Functors, Natural Transformation -}
-
-record Cat (Obj : Set₁) : Set₂ where
-  infixr 9 _∘_
-  field
-    Hom : Obj → Obj → Set₁
-    id : ∀ {X} → Hom X X
-    _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
-    idl : ∀ {X Y} (f : Hom X Y) → id ∘ f ≡ f
-    idr : ∀ {X Y} (f : Hom X Y) → f ∘ id ≡ f
-    ass : ∀ {W X Y Z} (f : Hom X W) (g : Hom Y X) (h : Hom Z Y)
-          → (f ∘ g) ∘ h ≡ f ∘ (g ∘ h)
-
-record Func {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B) (F : A → B) : Set₁ where
-  open Cat
-  field
-    F₁ : ∀ {X Y} → Hom ℂ X Y → Hom 𝔻 (F X) (F Y)
-    F-id : ∀ {X} → F₁ {X} (ℂ .id) ≡ 𝔻 .id
-    F-∘ : ∀ {X Y Z} (f : Hom ℂ Y Z) (g : Hom ℂ X Y)
-          → F₁ (ℂ ._∘_ f g ) ≡ 𝔻 ._∘_ (F₁ f) (F₁ g)
-    
-
-record Nat {A B : Set₁} (ℂ : Cat A) (𝔻 : Cat B)
-  (F G : A → B) (FF : Func ℂ 𝔻 F) (GG : Func ℂ 𝔻 G) : Set₁ where
-  open Cat
-  open Func
-  field
-    η : ∀ X → Hom 𝔻 (F X) (G X)
-    nat : ∀ {X Y} (f : Hom ℂ X Y)
-      → 𝔻 ._∘_ (GG .F₁ f) (η X) ≡ 𝔻 ._∘_ (η Y) (FF .F₁ f)
-
-postulate
-  Nat≡ : {A B : Type₁} {ℂ : Cat A} {𝔻 : Cat B} {F G : A → B}
-    → {FF : Func ℂ 𝔻 F} {GG : Func ℂ 𝔻 G}
-    → {α β : Nat ℂ 𝔻 F G FF GG}
-    → α .Nat.η ≡ β .Nat.η → α ≡ β
-
-{-
-{- Higher Functoriality -}
-
-⟦_⟧Func : HCont A → Set₁
-⟦_⟧Cat : (A : Ty) → Cat (Σ (HCont A) ⟦_⟧Func)
-
-⟦_⟧Func {*} X = Lift ⊤
-⟦_⟧Func {A ⇒ B} H =
-  Σ[ HH ∈ ({F : HCont A} → ⟦ F ⟧Func → ⟦ H $ F ⟧Func) ]
-  Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H $ F , HH FF)
-
-⟦ * ⟧Cat = record
-  { Hom = λ (X , lift tt) (Y , lift tt) → HContHom X Y
-  ; id = idHContHom
-  ; _∘_ = ∘HContHom
-  ; idl = λ f i → {!!}
-  ; idr = {!!}
-  ; ass = {!!}
-  }
-
-⟦ A ⇒ B ⟧Cat = record
-  { Hom = λ (F , FF , FFF) (G , GG , GGG)
-    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F $ X , FF XX) (λ (X , XX) → (G $ X) , GG XX) FFF GGG
-  ; id = record { η = λ X → ⟦ B ⟧Cat .Cat.id ; nat = {!!} }
-  ; _∘_ = λ x x₁ → record { η = λ X → ⟦ B ⟧Cat .Cat._∘_ (x .Nat.η X) (x₁ .Nat.η X) ; nat = {!!} }
-  ; idl = {!!}
-  ; idr = {!!}
-  ; ass = {!!}
-  }
 -}
