@@ -1,35 +1,58 @@
-{-# OPTIONS --type-in-type --cubical-compatible #-}
+{-# OPTIONS --cubical --guardedness #-}
 
 module Cont.CCont where
 
-record Cat : Set where
+open import Cubical.Foundations.Prelude
+open import Cubical.Categories.Category
+open import Cubical.Categories.Functor
+open import Cubical.Categories.NaturalTransformation
+open import Cubical.Categories.Instances.Sets
+
+Cat = Category (ℓ-suc ℓ-zero) ℓ-zero
+
+Func : Cat → Cat → Type (ℓ-suc ℓ-zero)
+Func = Functor {ℓ-suc ℓ-zero} {ℓ-zero}
+
+Sets : Cat
+Sets = SET ℓ-zero
+
+{- Categorical Container -}
+
+record Cont : Type (ℓ-suc (ℓ-suc ℓ-zero)) where
+  constructor _◃_
   field
-    Obj : Set
-    Hom : Obj → Obj → Set
-    id : ∀ {X} → Hom X X
-    _∘_ : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
-    {- +laws -}
+    S : Cat
+    P : Func S Sets
 
-id' : {X : Set} → X → X
-id' x = x
+variable SP TQ : Cont
 
-_∘'_ : {X Y Z : Set} → (Y → Z) → (X → Y) → X → Z
-(f ∘' g) x = f (g x)
+record ContHom (SP TQ : Cont) : Type (ℓ-suc ℓ-zero) where
+  constructor _◃_
+  open Cont SP
+  open Cont TQ renaming (S to T; P to Q)
+  field
+    F : Func S T
+    δ : NatTrans (Q ∘F F) P
 
+ContHom-id : ContHom SP SP
+ContHom-id {S ◃ P} = 𝟙⟨ S ⟩ ◃ {!!}
+    
+
+{-
 module _ (ℂ : Cat) where
 
   open Cat ℂ
 
   infix  0 _◃_
-  record Cont : Set₁ where
+  record Cont : Type₁ where
     constructor _◃_
     field
-      S : Set
+      S : Type
       P : S → Obj
 
   private variable SP TQ : Cont
 
-  record ContHom (SP TQ : Cont) : Set where
+  record ContHom (SP TQ : Cont) : Type where
     constructor _◃_
     open Cont SP
     open Cont TQ renaming (S to T; P to Q)
@@ -43,7 +66,7 @@ module _ (ℂ : Cat) where
   CONT .id = id' ◃ λ s → id
   CONT ._∘_ (f ◃ g) (h ◃ k) = f ∘' h ◃ λ s → k s ∘ g (h s)
 
-  record ⟦_⟧ (SP : Cont) (X : Obj) : Set where
+  record ⟦_⟧ (SP : Cont) (X : Obj) : Type where
     constructor _,_
     open Cont SP
     field
@@ -55,3 +78,4 @@ module _ (ℂ : Cat) where
 
   ⟦_⟧Hom : {SP TQ : Cont} → ContHom SP TQ → (X : Obj) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
   ⟦ f ◃ g ⟧Hom X (s , k) = f s , (k ∘ g s)
+-}

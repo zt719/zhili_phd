@@ -13,7 +13,6 @@ record BiCat (ℓ₀ ℓ₁ ℓ₂ : Level) : Type (suc (ℓ₀ ⊔ ℓ₁ ⊔ �
 
     -- 1-Cell
     Hom : Obj → Obj → Type ℓ₁
-    isSetHom : {A B : Obj} → isSet (Hom A B)
 
     id₁  : {A : Obj} → Hom A A
     _∘₁_ : {A B C : Obj} → Hom B C → Hom A B → Hom A C

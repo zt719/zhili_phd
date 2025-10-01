@@ -3,7 +3,7 @@ module Hereditary where
 {- The calculus -}
 
 data Ty : Set where
-  *   : Ty
+  ∘   : Ty
   _⇒_ : Ty → Ty → Ty
 
 variable A B C : Ty
@@ -91,6 +91,21 @@ var x [ γ ] = x [ γ ]v
 lam t [ γ ] = lam (t [ γ ↑ ])
 app t₁ t₂ [ γ ] = app (t₁ [ γ ]) (t₂ [ γ ])
 
+{- Convertibility -}
+
+module _ where
+
+  private variable t t₁ t₂ t₃ u u₁ u₂ : Tm Γ A
+
+  data _βη-≡_ : Tm Γ A → Tm Γ A → Set where
+    brefl : t βη-≡ t
+    bsym : t βη-≡ u → u βη-≡ t
+    btrans : t₁ βη-≡ t₂ → t₂ βη-≡ t₃ → t₁ βη-≡ t₃
+    congLam : t₁ βη-≡ t₂ → lam t₁ βη-≡ lam t₂
+    congApp : t₁ βη-≡ t₂ → u₁ βη-≡ u₂ → app t₁ u₂ βη-≡ app t₂ u₂
+    beta : app (lam t) u βη-≡ subst t vz u
+    eta  : lam (app (wkTm vz t) (var vz)) βη-≡ t
+
 {- Normal forms -}
 
 data Nf : Con → Ty → Set
@@ -101,7 +116,7 @@ data Sp : Con → Ty → Ty → Set
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
-  ne  : Ne Γ * → Nf Γ *
+  ne  : Ne Γ ∘ → Nf Γ ∘
 
 data Ne where
   _,_ : Var Γ A → Sp Γ A B → Ne Γ B
@@ -145,7 +160,7 @@ ne2nf : Ne Γ A → Nf Γ A
 
 var2nf x = ne2nf (x , ε)
 
-ne2nf {A = *} e = ne e
+ne2nf {A = ∘} e = ne e
 ne2nf {A = A ⇒ B} (v , ns) =
   lam (ne2nf {A = B} (vs v , appSp (wkSp vz ns) (var2nf vz)))
 

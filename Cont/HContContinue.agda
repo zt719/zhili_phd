@@ -1,10 +1,13 @@
-module Cont.HCont where
+{-# OPTIONS --cubical --guardedness #-}
 
+module Cont.HContContinue where
+
+open import Cubical.Foundations.Prelude
 open import Level renaming (zero to lzero; suc to lsuc)
-open import Data.Empty
-open import Data.Unit
-open import Data.Sum
-open import Data.Product
+open import Cubical.Data.Empty
+open import Cubical.Data.Unit renaming (Unit to ⊤)
+open import Cubical.Data.Sum
+open import Cubical.Data.Sigma
 open import Function.Base
 
 {-- Syntax --}
@@ -437,3 +440,128 @@ emb {Γ} {A} (ne (S ◃ P ◃ R))
 
 embSp ε u = u
 embSp (t , ts) u = embSp ts (app u (emb t))
+
+{- Simply Typed Categories with Families -}
+
+data Nfs : Con → Con → Set₁ where
+  ε   : Nfs Γ •
+  _,_ : Nfs Δ Γ → Nf Δ A → Nfs Δ (Γ ▹ A)
+
+variable γ δ θ : Nfs Δ Γ
+
+wkNfs : (x : Var Δ A) → Nfs (Δ - x) Γ → Nfs Δ Γ
+wkNfs x ε = ε
+wkNfs x (γ , t) = wkNfs x γ , wkNf x t
+
+_↑_ : Nfs Δ Γ → (A : Ty) → Nfs (Δ ▹ A) (Γ ▹ A)
+γ ↑ A = wkNfs vz γ , nvar vz
+
+idNfs : Nfs Γ Γ
+idNfs {•} = ε
+idNfs {Γ ▹ A} = idNfs ↑ A
+
+id : Nfs Γ Γ
+id = idNfs
+
+subVar : Var Γ A → Nfs Δ Γ → Nf Δ A
+subVar vz (γ , t) = t
+subVar (vs x) (γ , t) = subVar x γ
+
+_[_]nf : Nf Γ A → Nfs Δ Γ → Nf Δ A
+
+_[_]sp : Sp Γ A B → Nfs Δ Γ → Sp Δ A B
+
+lam t [ γ ]nf = lam (t [ γ ↑ _ ]nf)
+ne (S ◃ P ◃ R) [ γ ]nf = Σnf[ s ∈ S ]
+  Πnf[ A ∈ Ty ] Πnf[ x ∈ Var _ A ] Πnf[ p ∈ P x s ]
+  (subVar x γ) ◇ (R x s p [ γ ]sp)
+
+ε [ γ ]sp = ε
+(t , ts) [ γ ]sp = t [ γ ]nf , ts [ γ ]sp
+
+_[_] : Nf Γ A → Nfs Δ Γ → Nf Δ A
+_[_] = _[_]nf
+
+
+_∘nfs_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
+ε ∘nfs γ = ε
+(δ , t) ∘nfs γ = δ ∘nfs γ , t [ γ ]nf
+
+infixr 5 _∘_
+
+_∘_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
+_∘_ = _∘nfs_
+
+π₁ : Nfs Δ (Γ ▹ A) → Nfs Δ Γ
+π₁ (γ , t) = γ
+
+π₂ : Nfs Δ (Γ ▹ A) → Nf Δ A
+π₂ (γ , t) = t
+
+π₁β : π₁ (γ , t) ≡ γ
+π₁β = refl
+
+π₂β : π₂ (γ , t) ≡ t
+π₂β = refl
+
+πη : (π₁ γ , π₂ γ) ≡ γ
+πη {γ = γ , t} = refl
+
+,∘ : (γ , t) ∘ δ ≡ (γ ∘ δ , t [ δ ])
+,∘ = refl
+
+•-η : γ ≡ ε
+•-η {γ = ε} = refl
+
+idl : id ∘ γ ≡ γ
+idr : γ ∘ id ≡ γ
+ass : (γ ∘ δ) ∘ θ ≡ γ ∘ (δ ∘ θ)
+
+[id] : t [ id ] ≡ t
+[∘] : t [ γ ∘ δ ] ≡ t [ γ ] [ δ ]
+
+vz[] : nvar vz [ γ , t ] ≡ t
+vs[] : {n : Var Γ A} → nvar (vs n) [ γ , u ] ≡ nvar n [ γ ]
+
+idl {γ = ε} = refl
+idl {γ = γ , t} i = {!!} , vz[] {γ = γ} {t = t} i
+
+idr {γ = ε} = refl
+idr {γ = γ , t} i = idr {γ = γ} i , [id] {t = t} i
+
+ass {γ = ε} = refl
+ass {γ = γ , t} {δ = δ} {θ = θ} i
+  = ass {γ = γ} {δ = δ} {θ = θ} i , [∘] {t = t} {γ = δ} {δ = θ} (~ i)
+
+
+[id] {Γ} {A} {t} = 
+  t [ id ]                 ≡⟨ sym (π₂β {γ = id})⟩
+  π₂ (id , t [ id ])       ≡⟨ cong {A = Nfs Γ Γ} {B = λ _ → Nf Γ A} (λ x → π₂ {Γ = Γ} (x , t [ id ])) (sym idl) ⟩
+  π₂ (id ∘ id , t [ id ])  ≡⟨ cong (π₂ {Γ} {Γ}) (sym (,∘)) ⟩
+  π₂ ((id , t) ∘ id)       ≡⟨ cong π₂ idr ⟩
+  π₂ (id , t)              ≡⟨ refl ⟩
+  t                        ∎
+
+[∘] {t = t} {γ = γ} {δ = δ} =
+  t [ γ ∘ δ ]                        ≡⟨ sym π₂β ⟩
+  π₂ (γ ∘ δ , t [ γ ∘ δ ])           ≡⟨ cong (λ x → π₂ (x , t [ γ ∘ δ ])) (sym idl) ⟩
+  π₂ (id ∘ γ ∘ δ , t [ γ ∘ δ ])      ≡⟨ cong π₂ (sym ,∘) ⟩
+  π₂ ((id , t) ∘ γ ∘ δ)              ≡⟨ cong π₂ (sym ass) ⟩
+  π₂ (((id , t) ∘ γ) ∘ δ)            ≡⟨ cong (λ x → π₂ (x ∘ δ)) ,∘ ⟩
+  π₂ ((id ∘ γ , t [ γ ]) ∘ δ)        ≡⟨ cong π₂ ,∘ ⟩
+  π₂ ((id ∘ γ) ∘ δ , t [ γ ] [ δ ])  ≡⟨ π₂β ⟩
+  t [ γ ] [ δ ]                      ∎
+
+vz[] {γ = ε} {t = t} = {!!}
+vz[] {γ = γ , x} {t = t} = {!!}
+
+vs[] {γ = γ} {u = u} = {!!}
+
+-------------
+
+⇒β : ap (lam t) ≡ t
+⇒β = refl
+
+⇒η : lam (ap t) ≡ t
+⇒η {t = lam t} = refl
+

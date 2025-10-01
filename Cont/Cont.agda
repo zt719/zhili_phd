@@ -1,3 +1,5 @@
+{-# OPTIONS --guardedness #-}
+
 module Cont.Cont where
 
 open import Data.Empty
@@ -17,7 +19,7 @@ record Cont : Set₁ where
 variable
   SP TQ SP' TQ' : Cont
 
-record Hom (SP TQ : Cont) : Set where
+record ContHom (SP TQ : Cont) : Set where
   constructor _◃_
   open Cont SP
   open Cont TQ renaming (S to T; P to Q)
@@ -40,15 +42,23 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
 ⟦_⟧₁' : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
 ⟦ SP ⟧₁' f (s , k) = s , (f ∘ k)
 
-⟦_⟧Hom : {SP TQ : Cont} (fg : Hom SP TQ)
+data W (S : Set) (P : S → Set) : Set where
+  sup : ⟦ S ◃ P ⟧ (W S P) → W S P
+
+record M (S : Set) (P : S → Set) : Set where
+  coinductive
+  field
+    inf : ⟦ S ◃ P ⟧ (M S P)
+
+⟦_⟧ContHom : {SP TQ : Cont} (fg : ContHom SP TQ)
   → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-⟦ f ◃ g ⟧Hom X (s , k) = f s , (k ∘ g s)
+⟦ f ◃ g ⟧ContHom X (s , k) = f s , (k ∘ g s)
 
-idHom : Hom SP SP
-idHom = id ◃ λ s → id
+idContHom : ContHom SP SP
+idContHom = id ◃ λ s → id
 
-_∘Hom_ : Hom TQ TQ' → Hom SP TQ → Hom SP TQ'
-(f ◃ g) ∘Hom (h ◃ k) = f ∘ h ◃ λ s → k s ∘ g (h s)
+_∘ContHom_ : ContHom TQ TQ' → ContHom SP TQ → ContHom SP TQ'
+(f ◃ g) ∘ContHom (h ◃ k) = f ∘ h ◃ λ s → k s ∘ g (h s)
 
 ⊤C : Cont
 ⊤C = ⊤ ◃ const ⊥
@@ -135,31 +145,31 @@ _∘C_ : Cont → Cont → Cont
 -}
 
 -- Tensor Product
-_⊗Hom_ : Hom SP TQ → Hom SP' TQ' → Hom (SP ∘C SP') (TQ ∘C TQ')
-(f ◃ g) ⊗Hom (f' ◃ g')
+_⊗ContHom_ : ContHom SP TQ → ContHom SP' TQ' → ContHom (SP ∘C SP') (TQ ∘C TQ')
+(f ◃ g) ⊗ContHom (f' ◃ g')
   = (λ{ (s , k) → f s , f' ∘ k ∘ g s })
   ◃ λ{ (s , k) (q' , h) → g s q' , g' (k (g s q')) h }
 
-!C : (SP : Cont) → Hom ⊥C SP
+!C : (SP : Cont) → ContHom ⊥C SP
 !C (S ◃ P) = (λ ()) ◃ λ ()
 
-¿C : (SP : Cont) → Hom SP ⊤C
+¿C : (SP : Cont) → ContHom SP ⊤C
 ¿C (S ◃ P) = (λ _ → tt) ◃ λ{ s () }
 
-π₁C : Hom (SP ×C TQ) SP
+π₁C : ContHom (SP ×C TQ) SP
 π₁C = proj₁ ◃ λ{ (S , T) p → inj₁ p }
 
-π₂C : Hom (SP ×C TQ) TQ
+π₂C : ContHom (SP ×C TQ) TQ
 π₂C = proj₂ ◃ λ{ (S , T) q → inj₂ q }
 
-i₁C : Hom SP (SP ⊎C TQ)
+i₁C : ContHom SP (SP ⊎C TQ)
 i₁C = inj₁ ◃ λ s p → p
 
-i₂C : Hom TQ (SP ⊎C TQ)
+i₂C : ContHom TQ (SP ⊎C TQ)
 i₂C = inj₂ ◃ λ s q → q
 
-[_,_]C : Hom SP TQ → Hom SP' TQ → Hom (SP ⊎C SP') TQ
+[_,_]C : ContHom SP TQ → ContHom SP' TQ → ContHom (SP ⊎C SP') TQ
 [ f ◃ g , h ◃ k ]C = [ f , h ] ◃ λ{ (inj₁ s) p → g s p ; (inj₂ s') q → k s' q }
 
-<_,_>C : Hom SP TQ → Hom SP TQ' → Hom SP (TQ ×C TQ')
+<_,_>C : ContHom SP TQ → ContHom SP TQ' → ContHom SP (TQ ×C TQ')
 < f ◃ g , h ◃ k >C = < f , h > ◃ λ{ s (inj₁ p) → g s p ; s (inj₂ q) → k s q }

@@ -47,7 +47,6 @@ data EL where
   idl  : id ∘ γ ≡ γ
   idr  : γ ∘ id ≡ γ
   ass  : (γ ∘ δ) ∘ θ ≡ γ ∘ (δ ∘ θ)
---  isSetTms : isSet (Tms Δ Γ)
 
   {- Functor 𝐓 -}
   _[_] : Tm Γ A → Tms Δ Γ → Tm Δ A
@@ -69,19 +68,15 @@ data EL where
 
   {- Rules for function types -}
   _⇒_  : Ty → Ty → Ty
-  lam    : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
-  app   : Tm Γ (A ⇒ B) → Tm (Γ ▹ A) B
+  lam  : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
+  ap   : Tm Γ (A ⇒ B) → Tm (Γ ▹ A) B
 
-  _↑ : Tms Δ Γ → Tms (Δ ▹ A) (Γ ▹ A)
-  ↑≡  : _↑ {A = A} γ ≡ γ ∘ (π₁ id) , π₂ id
+  _↑   : Tms Δ Γ → Tms (Δ ▹ A) (Γ ▹ A)
+  ↑≡   : _↑ {A = A} γ ≡ γ ∘ (π₁ id) , π₂ id
 
   lam[] : (lam t) [ γ ] ≡ lam (t [ γ ↑ ])
-  ⇒β  : app (lam t) ≡ t  
-  ⇒η  : lam (app t) ≡ t
- 
-  {- Rules for t universe of small types -}
-  U : Ty
-  El : Tm Γ U → Ty
+  ⇒β   : ap (lam t) ≡ t  
+  ⇒η   : lam (ap t) ≡ t
 
 {- Derivables -}
 [id] : t [ id ] ≡ t
@@ -116,10 +111,10 @@ vs t = t [ wk ]
 <_> : Tm Γ A → Tms Γ (Γ ▹ A)
 < t > = id , t
 
-napp : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-napp t u = app t [ < u > ]
+app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
+app t u = ap t [ < u > ]
 
-β : napp (lam t) u ≡ t [ < u > ]
+β : app (lam t) u ≡ t [ < u > ]
 β {u = u} = cong _[ < u > ] ⇒β
 
 vz[] : vz [ γ , t ] ≡ t
@@ -141,12 +136,12 @@ vs[] {t = t} {γ = γ} {u = u} =
   t [ π₁ (γ , u) ]                              ≡⟨ cong (t [_]) π₁β ⟩
   t [ γ ]                                       ∎
 
-app[] : app (t [ γ ]) ≡ app t [ γ ↑ ]
+app[] : ap (t [ γ ]) ≡ ap t [ γ ↑ ]
 app[] {t = t} {γ = γ} =
-  app (t [ γ ])                ≡⟨ cong (λ x → app (x [ γ ])) (sym ⇒η) ⟩
-  app (lam (app t) [ γ ])      ≡⟨ cong app lam[] ⟩
-  app (lam (app t [ γ ↑ ]))  ≡⟨ ⇒β ⟩
-  app t [ γ ↑ ]              ∎
+  ap (t [ γ ])             ≡⟨ cong (λ x → ap (x [ γ ])) (sym ⇒η) ⟩
+  ap (lam (ap t) [ γ ])    ≡⟨ cong ap lam[] ⟩
+  ap (lam (ap t [ γ ↑ ]))  ≡⟨ ⇒β ⟩
+  ap t [ γ ↑ ]             ∎
 
 {-
 {- ,∘   : (γ , t) ∘ δ ≡ γ ∘ δ , t [ δ ] -}

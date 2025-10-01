@@ -41,7 +41,7 @@ record 2⟦_⟧ (SPR : 2Cont) (F : Cont) (X : Set) : Set where
   → {X Y : Set} → (X → Y)
   → 2⟦ SPR ⟧ F X → 2⟦ SPR ⟧ G Y
 2⟦ SPR ⟧₁ {F} {G} α {X} {Y} f (s , kx , kf) = s , (f ∘ kx)
-   , (λ pf → ⟦ α ⟧Hom (2⟦ RF s pf ⟧ G Y) (⟦ F ⟧₁ (2⟦ RF s pf ⟧₁ α f) (kf pf)))
+   , (λ pf → ⟦ α ⟧ContHom (2⟦ RF s pf ⟧ G Y) (⟦ F ⟧₁ (2⟦ RF s pf ⟧₁ α f) (kf pf)))
   where open 2Cont SPR
 
 {-# TERMINATING #-}
@@ -66,3 +66,7 @@ open import Data.Product
 
 = (S ◃ PX) ×C ((p : PF s) → (T ◃ Q) ∘C ⟦ RF s pf ⟧ (T ◃ Q)) X
 -}
+
+data 2W (SPPR : 2Cont) (X : Set) : Set where
+  sup : 2⟦ SPPR ⟧ (SPPR .2Cont.S ◃ SPPR .2Cont.PX) X → 2W SPPR X
+
