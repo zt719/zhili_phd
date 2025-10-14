@@ -9,7 +9,6 @@ open import Cubical.Data.Bool
 open import Cubical.Data.Sigma
 open import Function.Base
 
-open import Data.Pullback
 open import Cont.Cont
 
 data Free (SP : Cont) (A : Set) : Set where

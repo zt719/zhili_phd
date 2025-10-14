@@ -107,8 +107,11 @@ wkSp : (x : Var Γ A) → Sp (Γ - x) B C → Sp Γ B C
 wkNf x (lam t) = lam (wkNf (vs x) t)
 wkNf x (ne spr) = ne (wkNe x spr)
 
-wkNe {Γ} {A} {C} x (S ◃ P ◃ R) = S ◃ P′ ◃ R′
+wkNe {Γ} {A} {C} x (S ◃ P ◃ R) = S′ ◃ P′ ◃ R′
   where
+  S′ : Set
+  S′ = S
+  
   P′ : Var Γ B → S → Set
   P′ y  s with eq x y
   P′ .x s | same = ⊥
@@ -163,13 +166,12 @@ _[_:=_] : Nf Γ B → (x : Var Γ A) → Nf (Γ - x) A → Nf (Γ - x) B
 
 _<_:=_> : Sp Γ B C → (x : Var Γ A) → Nf (Γ - x) A → Sp (Γ - x) B C
 
-_◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
-
-napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
-
 lam t [ x := u ] = lam (t [ vs x := wkNf vz u ])
-ne {Γ} (S ◃ P ◃ R) [ x := u ] = ne (S ◃ P′ ◃ R′)
+ne {Γ} (S ◃ P ◃ R) [ x := u ] = ne (S′ ◃ P′ ◃ R′)
   where
+  S′ : Set
+  S′ = S
+  
   P′ : Var (Γ - x) A → S → Set
   P′ y s = P (wkv x y) s
   
@@ -179,11 +181,14 @@ ne {Γ} (S ◃ P ◃ R) [ x := u ] = ne (S ◃ P′ ◃ R′)
 ε < x := u > = ε
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
 
+napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
+napp (lam t) u = t [ vz := u ]
+
+_◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 t ◇ ε = t
 t ◇ (u , us) = napp t u ◇ us
 
-napp (lam t) u = t [ vz := u ]
-
+{-
 {- Algebraic Structures -}
 
 ⊤nf : Nf Γ A
@@ -258,20 +263,21 @@ infix 2 Πnf-syntax
 Πnf-syntax : (I : Set) → (I → Nf Γ A) → Nf Γ A
 Πnf-syntax = Πnf
 syntax Πnf-syntax A (λ x → B) = Πnf[ x ∈ A ] B
+-}
 
 {- Morphisms -}
 
-data NfHom : Nf Γ A → Nf Γ A → Set₁
+data NfHom : (Γ : Con) → Nf Γ A → Nf Γ A → Set₁
 
-record NeHom {Γ} {B} (spr tql : Ne Γ B) : Set₁
+record NeHom Γ {B} (spr tql : Ne Γ B) : Set₁
 
-data SpHom : Sp Γ A B → Sp Γ A B → Set₁
+data SpHom : (Γ : Con) → Sp Γ A B → Sp Γ A B → Set₁
 
 data NfHom where
-  lam : NfHom t u → NfHom (lam t) (lam u)
-  ne  : NeHom spr tql → NfHom (ne spr) (ne tql)
+  lam : NfHom (Γ ▹ A) t u → NfHom Γ (lam t) (lam u)
+  ne  : NeHom Γ spr tql → NfHom Γ (ne spr) (ne tql)
 
-record NeHom {Γ} {B} spr tql where
+record NeHom Γ {B} spr tql where
   constructor _◃_◃_
   inductive
   open Ne spr
@@ -280,20 +286,20 @@ record NeHom {Γ} {B} spr tql where
     f : S → T
     g : (x : Var Γ A) (s : S) → Q x (f s) → P x s
     h : (x : Var Γ A) (s : S) (q : Q x (f s))
-      → SpHom (R x s (g x s q)) (L x (f s) q)
+      → SpHom Γ (R x s (g x s q)) (L x (f s) q)
        
 data SpHom where
-  ε   : SpHom ts ts
-  _,_ : NfHom t u → SpHom ts us → SpHom (t , ts) (u , us)
+  ε   : SpHom Γ ts ts
+  _,_ : NfHom Γ t u → SpHom Γ ts us → SpHom Γ (t , ts) (u , us)
 
 HContHom = NfHom
 
-idNfHom : NfHom t t
+idNfHom : NfHom Γ t t
 idNfHom {t = ne spr} = ne (id ◃ (λ x s → id) ◃ λ x s q → ε)
 idNfHom {t = lam t} = lam (idNfHom {t = t})
 
-_∘nfHom_ : NfHom u w → NfHom t u → NfHom t w
-_∘spHom_ : SpHom us ws → SpHom ts us → SpHom ts ws
+_∘nfHom_ : NfHom Γ u w → NfHom Γ t u → NfHom Γ t w
+_∘spHom_ : SpHom Γ us ws → SpHom Γ ts us → SpHom Γ ts ws
 
 lam f ∘nfHom lam g = lam (f ∘nfHom g)
 ne (f ◃ g ◃ h) ∘nfHom ne (f′ ◃ g′ ◃ h′) = ne (
@@ -307,16 +313,86 @@ ne (f ◃ g ◃ h) ∘nfHom ne (f′ ◃ g′ ◃ h′) = ne (
 (f , fs) ∘spHom ε = f , fs
 (f , fs) ∘spHom (g , gs) = (f ∘nfHom g) , (fs ∘spHom gs)
 
+wkNfHom : (x : Var Γ A) {t u : Nf (Γ - x) B} → NfHom (Γ - x) t u → NfHom Γ (wkNf x t) (wkNf x u)
 
-!nf : (t : Nf Γ A) → NfHom t ⊤nf
+wkNeHom : (x : Var Γ A) {spr tql : Ne (Γ - x) B} → NeHom (Γ - x) spr tql → NeHom Γ (wkNe x spr) (wkNe x tql)
+
+wkSpHom : (x : Var Γ A) {ts us : Sp (Γ - x) B C} → SpHom (Γ - x) ts us → SpHom Γ (wkSp x ts) (wkSp x us)
+
+wkNfHom x (lam f) = lam (wkNfHom (vs x) f)
+wkNfHom x (ne f) = ne (wkNeHom x f)
+
+wkNeHom {Γ} x {S ◃ P ◃ R} {T ◃ Q ◃ L} (f ◃ g ◃ h) = f′ ◃ g′ ◃ h′
+  where
+  open Ne (wkNe x (S ◃ P ◃ R)) renaming (S to S′; P to P′; R to R′)
+  open Ne (wkNe x (T ◃ Q ◃ L)) renaming (S to T′; P to Q′; R to L′)
+
+  f′ : S′ → T′
+  f′ = f
+
+  g′ : (y : Var Γ A) (s′ : S′) → Q′ y (f′ s′) → P′ y s′
+  g′ y s′ q′ with eq x y
+  g′ .(wkv x y′) s′ q′ | diff .x y′ = g y′ s′ q′
+
+  h′ : (y : Var Γ A) (s′ : S′) (q′ : Q′ y (f′ s′)) → SpHom Γ (R′ y s′ (g′ y s′ q′)) (L′ y (f′ s′) q′)
+  h′ y s′ q′ with eq x y
+  h′ .(wkv x y′) s′ q′ | diff .x y′ = wkSpHom x (h y′ s′ q′)
+
+wkSpHom x ε = ε
+wkSpHom x (f , fs) = wkNfHom x f , wkSpHom x fs
+
+
+_[_:=_]Hom : NfHom Γ t u → (x : Var Γ A) (w : Nf (Γ - x) A) → NfHom (Γ - x) (t [ x := w ]) (u [ x := w ])
+
+_<_:=_>Hom : SpHom Γ ts us → (x : Var Γ A) (w : Nf (Γ - x) A) → SpHom (Γ - x) (ts < x := w >) (us < x := w >)
+
+(lam f) [ x := w ]Hom = lam (f [ vs x := wkNf vz w ]Hom)
+ne {Γ} {S ◃ P ◃ R} {T ◃ Q ◃ L} (f ◃ g ◃ h) [ x := w ]Hom = ne (f′ ◃ g′ ◃ h′)
+  where
+  S′ : Set
+  S′ = S
+
+  P′ : Var (Γ - x) A → S → Set
+  P′ y s = P (wkv x y) s
+
+  R′ : (y : Var (Γ - x) A) (s : S) → P′ y s → Sp (Γ - x) A *
+  R′ y s p = R (wkv x y) s p < x := w >
+
+  T′ : Set
+  T′ = T
+
+  Q′ : Var (Γ - x) A → T → Set
+  Q′ y t = Q (wkv x y) t
+
+  L′ : (y : Var (Γ - x) A) (t : T) → Q′ y t → Sp (Γ - x) A *
+  L′ y t q = L (wkv x y) t q < x := w >
+  
+  f′ : S → T
+  f′ = f
+
+  g′ : (y : Var (Γ - x) A) (s′ : S′) → Q′ y (f′ s′) → P′ y s′
+  g′ y s′ x = g (wkv _ y) s′ x
+
+  h′ : (y : Var (Γ - x) A) (s′ : S′) (q′ : Q′ y (f′ s′)) → SpHom (Γ - x) (R′ y s′ (g′ y s′ q′)) (L′ y (f′ s′) q′)
+  h′ y s′ q′ = h (wkv x y) s′ q′ < x := w >Hom
+
+ε < x := w >Hom = ε
+(f , fs) < x := w >Hom = (f [ x := w ]Hom) , (fs < x := w >Hom)
+
+-- napp₁ : (t : Nf Γ (A ⇒ B)) {u w : Nf Γ A} → NfHom Γ u w → NfHom Γ (napp t u) (napp t w)
+-- napp₁ (lam t) f = {!!}
+
+
+{-
+!nf : (t : Nf Γ A) → NfHom Γ t ⊤nf
 !nf (lam t) = lam (!nf t)
 !nf (ne (S ◃ P ◃ R)) = ne ((λ _ → tt) ◃ (λ x s ()) ◃ λ x s ())
 
-¿nf : (t : Nf Γ A) → NfHom ⊥nf t
+¿nf : (t : Nf Γ A) → NfHom Γ ⊥nf t
 ¿nf (lam t) = lam (¿nf t)
 ¿nf (ne (S ◃ P ◃ R)) = ne ((λ ()) ◃ (λ x ()) ◃ λ x ())
 
-π₁nf : (t u : Nf Γ A) → NfHom (t ×nf u) t
+π₁nf : (t u : Nf Γ A) → NfHom Γ (t ×nf u) t
 π₁nf (lam t) (lam u) = lam (π₁nf t u)
 π₁nf {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
   where
@@ -326,10 +402,10 @@ ne (f ◃ g ◃ h) ∘nfHom ne (f′ ◃ g′ ◃ h′) = ne (
   g : (x : Var Γ A) (st : S × T) → P x (f st) → P x (st .proj₁) ⊎ Q x (st .proj₂)
   g x (s , t) p = inj₁ p
 
-  h : (x : Var Γ A) (st : S × T) (q : P x (f st)) → SpHom (R x (f st) q) (R x (f st) q)
+  h : (x : Var Γ A) (st : S × T) (q : P x (f st)) → SpHom Γ (R x (f st) q) (R x (f st) q)
   h x (s , t) q = ε
 
-i₁nf : (t u : Nf Γ A) → NfHom t (t ⊎nf u)
+i₁nf : (t u : Nf Γ A) → NfHom Γ t (t ⊎nf u)
 i₁nf (lam t) (lam u) = lam (i₁nf t u)
 i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
   where
@@ -339,10 +415,10 @@ i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
   g : (x : Var Γ A) (s : S) → P x s → P x s
   g x s p = p
 
-  h : (x : Var Γ A) (s : S) (q : P x s) → SpHom (R x s (g x s q)) (R x s q)
+  h : (x : Var Γ A) (s : S) (q : P x s) → SpHom Γ (R x s (g x s q)) (R x s q)
   h x s q = ε
 
-<_,_>nf : NfHom t u → NfHom t w → NfHom t (u ×nf w)
+<_,_>nf : NfHom Γ t u → NfHom Γ t w → NfHom Γ t (u ×nf w)
 < lam tu , lam tv >nf = lam < tu , tv >nf
 <_,_>nf {Γ} {B} (ne (f₁ ◃ g₁ ◃ h₁)) (ne (f₂ ◃ g₂ ◃ h₂)) = ne (ff ◃ gg ◃ hh)
   where
@@ -357,7 +433,7 @@ i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
   hh x s (inj₁ q₁) = h₁ x s q₁
   hh x s (inj₂ q₂) = h₂ x s q₂
 
-[_,_]nf : NfHom t w → NfHom u w → NfHom (t ⊎nf u) w
+[_,_]nf : NfHom Γ t w → NfHom Γ u w → NfHom Γ (t ⊎nf u) w
 [ lam tv , lam uv ]nf = lam [ tv , uv ]nf
 [_,_]nf {Γ} {B} (ne (f₁ ◃ g₁ ◃ h₁)) (ne (f₂ ◃ g₂ ◃ h₂)) = ne (ff ◃ gg ◃ hh)
   where
@@ -371,6 +447,7 @@ i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
   hh : (x : Var Γ A) (s : _) (q : _) → _
   hh x (inj₁ s₁) q₁ = h₁ x s₁ q₁
   hh x (inj₂ s₂) q₂ = h₂ x s₂ q₂
+-}
 
 {-- Semantics --}
 
@@ -416,6 +493,7 @@ data Tm : Con → Ty → Set₁ where
   Πtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
   Σtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
 
+{-
 {- Normalization -}
 
 nf : Tm Γ A → Nf Γ A
@@ -424,6 +502,7 @@ nf (lam t) = lam (nf t)
 nf (app t u) = napp (nf t) (nf u)
 nf (Πtm I t⃗) = Πnf I (nf ∘ t⃗)
 nf (Σtm I t⃗) = Σnf I (nf ∘ t⃗)
+-}
 
 {- Embedding -}
 

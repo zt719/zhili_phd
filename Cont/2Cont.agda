@@ -1,3 +1,5 @@
+{-# OPTIONS --guardedness #-}
+
 module Cont.2Cont where
 
 open import Function.Base
@@ -54,9 +56,9 @@ record 2⟦_⟧ (SPR : 2Cont) (F : Cont) (X : Set) : Set where
 open import Data.Product
 
 {-# TERMINATING #-}
-2app : 2Cont → Cont → Cont
-2app (S ◃ PX ◃ PF ◃ RF) TQ
-  = (S ◃ PX) ×C (ΣC[ s ∈ S ] ΠC[ pf ∈ PF s ] TQ ∘C 2app (RF s pf) TQ)
+app : 2Cont → Cont → Cont
+app (S ◃ PX ◃ PF ◃ RF) TQ
+  = (S ◃ PX) ×C (ΣC[ s ∈ S ] ΠC[ pf ∈ PF s ] TQ ∘C app (RF s pf) TQ)
 
 {-
 2⟦ S ◃ PX ◃ PF ◃ RF ⟧ (T ◃ Q) X
@@ -67,6 +69,94 @@ open import Data.Product
 = (S ◃ PX) ×C ((p : PF s) → (T ◃ Q) ∘C ⟦ RF s pf ⟧ (T ◃ Q)) X
 -}
 
-data 2W (SPPR : 2Cont) (X : Set) : Set where
-  sup : 2⟦ SPPR ⟧ (SPPR .2Cont.S ◃ SPPR .2Cont.PX) X → 2W SPPR X
+--app₁ : (SPPR : 2Cont) → ContHom SP TQ → ContHom (app SPPR SP) (app SPPR TQ)
+--app₁ = {!!}
 
+open import Data.Unit
+open import Data.Sum
+
+variable X Y : Set
+
+record ℕ∞ : Set where
+  coinductive
+  field
+    pred∞ : ⊤ ⊎ ℕ∞
+open ℕ∞
+
+Maybe : Set → Set
+Maybe X = ⊤ ⊎ X
+
+unfoldℕ∞ : (X → Maybe X) → X → ℕ∞
+pred∞ (unfoldℕ∞ α x) with α x
+... | inj₁ tt = inj₁ tt
+... | inj₂ x' = inj₂ (unfoldℕ∞ α x')
+
+record Bush (A : Set) : Set where
+  coinductive
+  field
+    head : A
+    tail : Bush (Bush A)
+open Bush
+
+{-# TERMINATING #-}
+Bush₁ : (X → Y) → Bush X → Bush Y
+head (Bush₁ f bx) = f (head bx)
+tail (Bush₁ f bx) = Bush₁ (Bush₁ f) (tail bx)
+
+{-
+unfold𝔹ush : 𝔽 ⇒ ℍ 𝔽 → 𝔽 ⇒ 𝔹ush
+head (unfold𝔹ush α X fx) = α X fx .proj₁
+tail (unfold𝔹ush {𝔽} α X fx)
+  = unfold𝔹ush {𝔽} α (Bush X)
+  (𝔽 .proj₂ (unfold𝔹ush {𝔽} α X) (α X fx .proj₂))
+-}
+
+Func : Set₁
+Func = Set → Set
+
+variable 𝔽 𝔾 : Func
+
+_⇒_ : Func → Func → Set₁
+F ⇒ G = (X : Set) → F X → G X
+
+H : (Set → Set) → Set → Set
+H F X = X × F (F X)
+
+{-
+  X   →   ℕ∞      X   →      M S P       
+  ↓       ↓       ↓            ↓
+1 + X → 1 + ℕ∞  1 + X → ⟦ S ◃ P ⟧ (M S P)
+
+ F  →  Bush     F  →      2M SPPR
+ ↓      ↓       ↓            ↓ 
+H F → H Bush   H F → 2⟦ SPPR ⟧ (2M SPPR)
+-}
+    
+
+{-
+
+𝔹ush : Func
+𝔹ush = Bush , Bush₁
+
+open import Cont.Cont
+
+{-# TERMINATING #-}
+
+{-
+W' : Cont → Set
+W' SP = ⟦ SP ⟧ (W' SP)
+
+2W : 2Cont → Cont
+2W SPPR = app SPPR (2W SPPR)
+
+R2W : 2Cont → Set → Set
+R2W SPPR = ⟦ 2W SPPR ⟧
+
+C2F : Cont → Func
+C2F (S ◃ P) = ⟦ S ◃ P ⟧ , ⟦ S ◃ P ⟧₁
+
+{-# TERMINATING #-}
+data WW (SPPR : 2Cont) (X : Set) : Set where
+  sup : {!!} ⇒ {!!}
+-}
+-}
