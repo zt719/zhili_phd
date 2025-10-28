@@ -426,6 +426,7 @@ HCont A = Nf ∙ A
 ⟦_⟧hcont : HCont A → ⟦ A ⟧t
 ⟦ x ⟧hcont = ⟦ x ⟧nf (lift tt)
 
+{-
 ⟦_⟧nf₁ : (t : Nf Γ A) (γ : ⟦ Γ ⟧c) → ⟦ A ⟧HFunc (⟦ t ⟧nf γ)
 ⟦_⟧nf₁ {Γ} {A ⇒ B} (lam t) γ
   = (λ a afunc → ⟦ t ⟧nf₁ (γ , a))
@@ -442,3 +443,4 @@ HCont A = Nf ∙ A
 
 ⟦_⟧nfhom : {t u : Nf Γ (A ⇒ B)} (f : NfHom t u) (γ : ⟦ Γ ⟧c)
   → Nat {!!} {!!} (⟦ t ⟧nf γ) (⟦ u ⟧nf γ) {!⟦ t ⟧nf₁ γ .proj₂!} {!!}
+-}

@@ -188,7 +188,6 @@ _◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
 t ◇ ε = t
 t ◇ (u , us) = napp t u ◇ us
 
-{-
 {- Algebraic Structures -}
 
 ⊤nf : Nf Γ A
@@ -263,7 +262,6 @@ infix 2 Πnf-syntax
 Πnf-syntax : (I : Set) → (I → Nf Γ A) → Nf Γ A
 Πnf-syntax = Πnf
 syntax Πnf-syntax A (λ x → B) = Πnf[ x ∈ A ] B
--}
 
 {- Morphisms -}
 
@@ -516,3 +514,4 @@ emb {Γ} {A} (ne (S ◃ P ◃ R))
 
 embSp ε u = u
 embSp (t , ts) u = embSp ts (app u (emb t))
+

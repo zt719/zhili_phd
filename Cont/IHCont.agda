@@ -79,6 +79,7 @@ data JH (F : Set → Set) (X : Set) : ℕ → ℕ → Set where
   _∷₀_ : ∀ {m n} → X → JH F X m n → JH F X m (suc n)
   _∷₁_ : ∀ {m n} → F X → JH F X m n → JH F X (suc m) n
 
+{-
 JH-JHCont : JHCont ((* ⇒ *) ⇒ (* ⇒ *)) (ℕ × ℕ)
 JH-JHCont = lam (lam (ne ({!!} ◃ {!!} ◃ {!!})))
   where
@@ -87,3 +88,4 @@ JH-JHCont = lam (lam (ne ({!!} ◃ {!!} ◃ {!!})))
 
   S : Set
   S = {!!}
+-}

@@ -42,13 +42,21 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
 ⟦_⟧₁' : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
 ⟦ SP ⟧₁' f (s , k) = s , (f ∘ k)
 
-data W (S : Set) (P : S → Set) : Set where
-  sup : ⟦ S ◃ P ⟧ (W S P) → W S P
+data W (SP : Cont) : Set where
+  sup : ⟦ SP ⟧ (W SP) → W SP
 
-record M (S : Set) (P : S → Set) : Set where
+W₁ : ContHom SP TQ → W SP → W TQ
+W₁ (f ◃ g) (sup (s , k)) = sup (f s , λ q → W₁ (f ◃ g) (k (g s q)))
+
+record M (SP : Cont) : Set where
   coinductive
   field
-    inf : ⟦ S ◃ P ⟧ (M S P)
+    inf : ⟦ SP ⟧ (M SP)
+open M    
+
+M₁ : ContHom SP TQ → M SP → M TQ
+inf (M₁ (f ◃ g) msp) with inf msp
+... | s , k = f s , λ q → M₁ (f ◃ g) (k (g s q))
 
 ⟦_⟧ContHom : {SP TQ : Cont} (fg : ContHom SP TQ)
   → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
@@ -59,6 +67,9 @@ idContHom = id ◃ λ s → id
 
 _∘ContHom_ : ContHom TQ TQ' → ContHom SP TQ → ContHom SP TQ'
 (f ◃ g) ∘ContHom (h ◃ k) = f ∘ h ◃ λ s → k s ∘ g (h s)
+
+constC : Cont
+constC = ⊤ ◃ λ _ → ⊤
 
 ⊤C : Cont
 ⊤C = ⊤ ◃ const ⊥

@@ -92,8 +92,6 @@ _⊎C_ : Cont → Cont → Cont
   = (S ⊎ T) ◃ (λ{ (inl s) → P s ; (inr t) → Q t })
   & isSet⊎ isSetS isSetT & (λ{ (inl s) → isSetP s ; (inr t) → isSetQ t })
 
--- What to do with these two holes ????
-
 {-
 zero-𝟘 : Initial CONT
 zero-𝟘 = zero , λ (S ◃ P & isSetS & isSetP) → ((λ ()) ◃ (λ ())) , λ (f ◃ g) i → {!!}

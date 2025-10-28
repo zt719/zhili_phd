@@ -4,6 +4,8 @@ module Cont.HFunc where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit renaming (Unit to ⊤)
+open import Cubical.Data.Sigma
+open import Cubical.Data.Sum
 
 record Cat (Obj : Type₁) : Type₂ where
   infixr 9 _∘_
@@ -39,25 +41,29 @@ postulate
     → {α β : Nat ℂ 𝔻 F G FF GG}
     → α .Nat.η ≡ β .Nat.η → α ≡ β
 
+{- Syntax -}
+
 infixr 20 _⇒_
 data Ty : Type where
   * : Ty
   _⇒_ : Ty → Ty → Ty
+  
+{- Semantics -}
 
-⟦_⟧ : Ty → Type₁
-⟦ * ⟧ = Type
-⟦ A ⇒ B ⟧ = ⟦ A ⟧ → ⟦ B ⟧
+⟦_⟧T : Ty → Type₁
+⟦ * ⟧T = Type
+⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
-isHFunc : {A : Ty} → ⟦ A ⟧ → Type₁
+⟦_⟧Func : (A : Ty) → ⟦ A ⟧T → Type₁
 
-⟦_⟧HCat : (A : Ty) → Cat (Σ ⟦ A ⟧ isHFunc)
+⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧Func)
 
-isHFunc {*} X = Lift ⊤
-isHFunc {A ⇒ B} H =
-  Σ[ HH ∈ ((F : ⟦ A ⟧) → isHFunc F → isHFunc (H F)) ]
-  Func ⟦ A ⟧HCat ⟦ B ⟧HCat (λ (F , FF) → H F , HH F FF)
+⟦ * ⟧Func X = Lift ⊤
+⟦ A ⇒ B ⟧Func H =
+  Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧Func F → ⟦ B ⟧Func (H F)) ]
+  Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
 
-⟦ * ⟧HCat = record
+⟦ * ⟧Cat = record
   { Hom = λ (X , lift tt) (Y , lift tt) → Lift (X → Y)
   ; id = lift (λ x → x)
   ; _∘_ = λ{ (lift f) (lift g) → lift (λ x → f (g x)) }
@@ -65,9 +71,9 @@ isHFunc {A ⇒ B} H =
   ; idr = λ f → refl
   ; ass = λ f g h → refl
   }
-⟦ A ⇒ B ⟧HCat = record
+⟦ A ⇒ B ⟧Cat = record
   { Hom = λ (F , FF , FFF) (G , GG , GGG)
-    → Nat ⟦ A ⟧HCat ⟦ B ⟧HCat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
+    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
   ; id = record
     { η = λ X → id
     ; nat = λ f → idr _ ∙ sym (idl _)
@@ -82,8 +88,73 @@ isHFunc {A ⇒ B} H =
   ; ass = λ α β γ → Nat≡ (λ i X → ass (α .η X) (β .η X) (γ .η X) i)
   }
   where
-    open Cat ⟦ B ⟧HCat
+    open Cat ⟦ B ⟧Cat
     open Nat
 
-HFunc : Ty →  Type₁
-HFunc A = Σ ⟦ A ⟧ isHFunc
+B : ⟦ (* ⇒ *) ⇒ * ⇒ * ⟧T
+B F X = X × F (F X)
+
+BB : ⟦ (* ⇒ *) ⇒ * ⇒ * ⟧Func B
+BB = B₀ , {!FuncB!} -- 
+  where
+  open Func
+  
+  B₀ : (F : Type → Type) → ⟦ * ⇒ * ⟧Func F → ⟦ * ⇒ * ⟧Func (B F)
+  B₀ F (_ , record { F₁ = F₁ ; F-id = F-id ; F-∘ = F-∘ })
+    = _ , record
+    { F₁ = λ (lift f) → lift (λ (x , ffx) → f x , lower (F₁ (F₁ (lift f))) ffx)
+    ; F-id = λ i → lift (λ (x , ffx) → x , {!!})
+    }
+    {-
+    { F₁ = λ{ f (x , ffx) → f x , F₁ (F₁ f) ffx }
+    ; F-id = λ i (x , ffx) → x , (cong F₁ F-id ∙ F-id) i ffx
+    ; F-∘ = λ f g i (x , ffx) → f (g x) , (cong F₁ (F-∘ f g) ∙ F-∘ (F₁ f) (F₁ g)) i ffx
+    -}
+
+
+{-
+  FuncB : Func ⟦ * ⇒ * ⟧Cat ⟦ * ⇒ * ⟧Cat _
+  FuncB .F₁ {F , _ , FF} {G , _ , GG} record { η = η ; nat = nat }
+    = record
+    { η = λ (X , _) (x , ffx) → x , η (G X , lift tt) (F₁ FF (η (X , lift tt)) ffx)
+    ; nat = λ f i (x , ffx) → f x , aux f i ffx
+    }
+    where
+      open Cat ⟦ * ⟧Cat
+      aux : {X Y : Type} (f : X → Y)
+        → F₁ GG (F₁ GG f) ∘ η (G X , lift tt) ∘ F₁ FF (η (X , lift tt))
+        ≡ η (G Y , lift tt) ∘ F₁ FF (η (Y , lift tt)) ∘ F₁ FF (F₁ FF f)
+      aux {X} {Y} f =
+        F₁ GG (F₁ GG f) ∘ η (G X , lift tt) ∘ F₁ FF (η (X , lift tt))
+          ≡⟨ cong (F₁ GG (F₁ GG f) ∘_) (sym (nat (η (X , lift tt)))) ⟩
+        F₁ GG (F₁ GG f) ∘ F₁ GG (η (X , lift tt)) ∘ η (F X , lift tt)
+          ≡⟨ cong (_∘ η (F X , lift tt)) (sym (F-∘ GG (F₁ GG f) (η (X , lift tt)))) ⟩
+        F₁ GG (F₁ GG f ∘ η (X , lift tt)) ∘ η (F X , lift tt)
+          ≡⟨ cong (_∘ η (F X , lift tt)) (cong (F₁ GG) (nat f)) ⟩
+        F₁ GG (η (Y , lift tt) ∘ F₁ FF f) ∘ η (F X , lift tt)
+          ≡⟨ cong (_∘ η (F X , lift tt)) (F-∘ GG (η (Y , lift tt)) (F₁ FF f)) ⟩
+        F₁ GG (η (Y , lift tt)) ∘ F₁ GG (F₁ FF f) ∘ η (F X , lift tt)
+          ≡⟨ cong (F₁ GG (η (Y , lift tt)) ∘_) (nat (F₁ FF f)) ⟩
+        F₁ GG (η (Y , lift tt)) ∘ η (F Y , lift tt) ∘ F₁ FF (F₁ FF f)
+          ≡⟨ cong (_∘ F₁ FF (F₁ FF f)) (nat (η (Y , lift tt))) ⟩
+        η (G Y , lift tt) ∘ F₁ FF (η (Y , lift tt)) ∘ F₁ FF (F₁ FF f)
+          ∎
+
+  FuncB .F-id {F , _ , FF} = Nat≡ (λ i (X , _) (x , ffx) → x , F-id FF i ffx)
+
+  FuncB .F-∘ {F , _ , FF} {G , _ , GG} {H , _ , HH}
+    record { η = η₁ ; nat = nat₁ }
+    record { η = η₂ ; nat = nat₂ }
+    = Nat≡ (λ i (X , _) (x , ffx) → x , aux i ffx)
+    where
+      open Cat ⟦ * ⟧Cat
+      aux : {X : Type}
+        → η₁ (H X , lift tt) ∘ η₂ (H X , lift tt) ∘ F₁ FF(η₁ (X , lift tt) ∘ η₂ (X , lift tt))
+        ≡ η₁ (H X , lift tt) ∘ F₁ GG (η₁ (X , lift tt)) ∘ η₂ (G X , lift tt) ∘ F₁ FF (η₂ (X , lift tt))
+      aux {X} =
+        η₁ (H X , lift tt) ∘ η₂ (H X , lift tt) ∘ F₁ FF (η₁ (X , lift tt) ∘ η₂ (X , lift tt))
+          ≡⟨ cong ((η₁ (H X , lift tt) ∘ η₂ (H X , lift tt)) ∘_) (F-∘ FF (η₁ (X , lift tt)) (η₂ (X , lift tt))) ⟩
+        η₁ (H X , lift tt) ∘ η₂ (H X , lift tt) ∘ F₁ FF (η₁ (X , lift tt)) ∘ F₁ FF (η₂ (X , lift tt))
+          ≡⟨ cong (η₁ (H X , lift tt) ∘_) (cong (_∘ F₁ FF (η₂ (X , lift tt))) (sym (nat₂ (η₁ (X , lift tt))))) ⟩
+        η₁ (H X , lift tt) ∘ F₁ GG (η₁ (X , lift tt)) ∘ η₂ (G X , lift tt) ∘ F₁ FF (η₂ (X , lift tt)) ∎
+-}
