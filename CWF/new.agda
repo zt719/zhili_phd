@@ -31,7 +31,7 @@ record SCwF : Set₁ where
     
     -- empty context
     • : Con
-    ε : {Γ : Con} → Tms Γ • 
+    ε : {Γ : Con} → Tms Γ •
     •-η : {Γ : Con}{γ : Tms Γ •} → γ ≡ ε
     
     -- context extension

@@ -1,14 +1,27 @@
-{-# OPTIONS --cubical --guardedness #-}
+{-# OPTIONS  --guardedness #-}
 
-module Cont.Everything where
+module Cont.Every where
 
-open import Cubical.Foundations.Prelude
 open import Function.Base
 
-open import Cubical.Data.Unit renaming (Unit to ⊤)
-open import Cubical.Data.Empty
-open import Cubical.Data.Sigma renaming (fst to proj₁; snd to proj₂)
-open import Cubical.Data.Sum renaming (inl to inj₁; inr to inj₂)
+open import Data.Unit
+open import Data.Empty
+open import Data.Product
+open import Data.Sum
+
+open import Relation.Binary.PropositionalEquality
+
+postulate
+  funExt : {A : Set} {B : A → Set}
+    {f g : (x : A) → B x}
+    (p : (x : A) → f x ≡ g x)
+    → f ≡ g
+
+funExt⁻ : {A : Set} {B : A → Set}
+  {f g : (x : A) → B x}
+  (p : f ≡ g)
+  (x : A) → f x ≡ g x
+funExt⁻ refl x = refl
 
 case : {A B : Set} → (A → Set) → (B → Set) → A ⊎ B → Set
 case f g (inj₁ a) = f a
@@ -51,10 +64,17 @@ module _ (X : Set) (α : ⊤ ⊎ X → X) where
   ⊤⊎₁ f (inj₁ tt) = inj₁ tt
   ⊤⊎₁ f (inj₂ x) = inj₂ (f x)
 
-  commuteℕ : foldℕ ∘ [z,s] ≡ α ∘ ⊤⊎₁ foldℕ
-  commuteℕ i (inj₁ tt) = α (inj₁ tt)
-  commuteℕ i (inj₂ n) = α (inj₂ (foldℕ n))
+  commuteℕ : (a : ⊤ ⊎ ℕ) → foldℕ ([z,s] a) ≡ α (⊤⊎₁ foldℕ a)
+  commuteℕ (inj₁ tt) = refl
+  commuteℕ (inj₂ n) = refl
 
+  !foldℕ : (foldℕ' : ℕ → X)
+    (commuteℕ' : (a : ⊤ ⊎ ℕ) → foldℕ' ([z,s] a) ≡ α (⊤⊎₁ foldℕ' a))
+    (n : ℕ) → foldℕ' n ≡ foldℕ n
+  !foldℕ foldℕ' commuteℕ' zero = commuteℕ' (inj₁ tt)
+  !foldℕ foldℕ' commuteℕ' (suc n)
+    = trans (commuteℕ' (inj₂ n)) (cong (α ∘ inj₂) (!foldℕ foldℕ' commuteℕ' n))
+  
 {- Containers & W -}
 
 infix  0 _◃_
@@ -76,6 +96,31 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
 ⟦_⟧₁ : (SP : Cont) → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
 ⟦ SP ⟧₁ g (s , f) = s , g ∘ f
 
+record Eq⟦⟧ (sf sf' : ⟦ SP ⟧ X) : Set₁ where
+  constructor _,_
+  open Cont SP
+  open ⟦_⟧ sf
+  open ⟦_⟧ sf' renaming (s to s'; f to f')
+  field
+    eqs : s ≡ s'
+    eqf : (p : P s) → f p ≡ f' (subst P eqs p)
+
+Eq⟦⟧-to-≡ : {S : Set} {P : S → Set}
+  {s s' : S} {f : P s → X} {f' : P s' → X}
+  → Eq⟦⟧ (s , f) (s' , f')
+  → _≡_ {A = ⟦ S ◃ P ⟧ X} (s , f) (s' , f')
+Eq⟦⟧-to-≡ (refl , eqf) with funExt eqf
+... | refl = refl
+
+{-
+⟦⟧≡ : {S : Set} {P : S → Set}
+  {s s' : S} {f : P s → X} {f' : P s' → X}
+  → Σ[ eqs ∈ s ≡ s' ] ((p : P s) → f p ≡ f' (subst P eqs p))
+  → _≡_ {A = ⟦ S ◃ P ⟧ X} (s , f) (s' , f')
+⟦⟧≡ (refl , eqf) with funExt eqf
+... | refl = {!!}
+-}
+
 data W (SP : Cont) : Set where
   sup : ⟦ SP ⟧ (W SP) → W SP
 
@@ -88,8 +133,14 @@ module _ (X : Set) (α : ⟦ SP ⟧ X → X) where
   foldW : W SP → X
   foldW (sup (s , f)) = α (s , foldW ∘ f)
 
-  commuteW : foldW ∘ sup ≡ α ∘ ⟦ SP ⟧₁ foldW
-  commuteW i (s , f) = α (s , foldW ∘ f)
+  commuteW : (sf : ⟦ SP ⟧ (W SP)) → foldW (sup sf) ≡ α (⟦ SP ⟧₁ foldW sf)
+  commuteW sf = refl
+
+  !foldW : (foldW' : W SP → X)
+    (commuteW' : (sf : ⟦ SP ⟧ (W SP)) → foldW' (sup sf) ≡ α (⟦ SP ⟧₁ foldW' sf)) → 
+    (w : W SP) → foldW' w ≡ foldW w
+  !foldW foldW' commuteW' (sup (s , f))
+    = trans (commuteW' (s , f)) (cong α (Eq⟦⟧-to-≡ (refl , λ p → !foldW foldW' commuteW' (f p))))
 
 module ℕ≃W-Maybe where
 
@@ -104,24 +155,24 @@ module ℕ≃W-Maybe where
   P (inj₁ tt) = ⊥
   P (inj₂ tt) = ⊤
 
-  to : ℕ → W (S ◃ P)
+  Maybeᶜ : Cont
+  Maybeᶜ = S ◃ P
+
+  to : ℕ → W Maybeᶜ
   to zero = sup (inj₁ tt , λ ())
   to (suc n) = sup (inj₂ tt , λ{ tt → to n })
 
-  from : W (S ◃ P) → ℕ
+  from : W Maybeᶜ → ℕ
   from (sup (inj₁ tt , _)) = zero
   from (sup (inj₂ tt , f)) = suc (from (f tt))
 
-  from∘to : from ∘ to ≡ id
-  from∘to i zero = zero
-  from∘to i (suc n) = suc (from∘to i n)
+  from∘to : (n : ℕ) → from (to n) ≡ n
+  from∘to zero = refl
+  from∘to (suc n) = cong suc (from∘to n)
 
-  to∘from : to ∘ from ≡ id
-  to∘from i (sup (inj₁ tt , f)) = sup (inj₁ tt , h i)
-    where
-    h : (λ ()) ≡ f
-    h i ()
-  to∘from i (sup (inj₂ tt , f)) = sup (inj₂ tt , λ{ tt → to∘from i (f tt) })
+  to∘from : (w : W Maybeᶜ) → to (from w) ≡ w
+  to∘from (sup (inj₁ tt , f)) = cong sup (Eq⟦⟧-to-≡ (refl , λ ()))
+  to∘from (sup (inj₂ tt , f)) = cong sup (Eq⟦⟧-to-≡ (refl , λ{ tt → to∘from (f tt) }))
 
 {- Category of Contaiers -}
 
@@ -223,17 +274,17 @@ module List-Cont where
   -- ≃ ⊤ ⊎ S ◃ λ{ (inl tt) → ⊥ ; (inr s) → ⊤ ⊎ P s }
   -- ≃ ℕ ◃ Fin
   -}
-
+  
   Fin : ℕ → Set
   Fin zero = ⊥
   Fin (suc n) = ⊤ ⊎ Fin n
 
   Listᶜ : Cont
   Listᶜ = ℕ ◃ Fin
-
+  
   to : List X → ⟦ Listᶜ ⟧ X
   to [] = zero , λ ()
-  to (x ∷ xs) = suc (to xs .s) , λ{ (inj₁ tt) → x ; (inj₂ n) → to xs .f n }
+  to (x ∷ xs) = suc (to xs .s) , λ{ (inj₁ tt) → x ; (inj₂ i) → to xs .f i }
     where open ⟦_⟧
 
   {-# TERMINATING #-}
@@ -241,13 +292,24 @@ module List-Cont where
   from (zero , _) = []
   from (suc n , f) = f (inj₁ tt) ∷ from (n , f ∘ inj₂)
 
-  from∘to : from {X} ∘ to ≡ id
-  from∘to i [] = []
-  from∘to i (x ∷ xs) = x ∷ from∘to i xs
+  from∘to : (xs : List X) → from (to xs) ≡ xs
+  from∘to [] = refl
+  from∘to (x ∷ xs) = cong₂ _∷_ refl (from∘to xs)
 
+  {-
+  {-# TERMINATING #-}
+  to∘from : (sf : ⟦ Listᶜ ⟧ X) → to (from sf) ≡ sf
+  to∘from (zero , f) = Eq⟦⟧-to-≡ (refl , λ ())
+  to∘from (suc n , f) = Eq⟦⟧-to-≡ (cong (suc ∘ ⟦_⟧.s) hh
+    , λ{ (inj₁ tt) → {!cong ⟦_⟧.f!} ; (inj₂ y) → {!!} })
+    where
+    hh : to (from (n , f ∘ inj₂)) ≡ (n , f ∘ inj₂)
+    hh = to∘from (n , f ∘ inj₂)
+  -}
+  
 {- List A as a W-type -}
 
-module ListA≃W-SP (A : Set) where
+module ListA≃W-⊤⊎A×Xᶜ (A : Set) where
 
   S : Set
   S = ⊤ ⊎ A
@@ -256,25 +318,25 @@ module ListA≃W-SP (A : Set) where
   P (inj₁ tt) = ⊥
   P (inj₂ a) = ⊤
 
-  to : List A → W (S ◃ P)
+  ⊤⊎A×Xᶜ : Cont
+  ⊤⊎A×Xᶜ = S ◃ P
+
+  to : List A → W ⊤⊎A×Xᶜ
   to [] = sup (inj₁ tt , λ ())
   to (a ∷ as) = sup (inj₂ a , λ{ tt → to as })
 
-  from : W (S ◃ P) → List A
+  from : W ⊤⊎A×Xᶜ → List A
   from (sup (inj₁ tt , f)) = []
   from (sup (inj₂ a , f)) = a ∷ from (f tt)
 
-  from∘to : from ∘ to ≡ id
-  from∘to i [] = []
-  from∘to i (a ∷ as) = a ∷ from∘to i as
+  from∘to : (as : List A) → from (to as) ≡ as
+  from∘to [] = refl
+  from∘to (a ∷ as) = cong₂ _∷_ refl (from∘to as)
 
-  to∘from : to ∘ from ≡ id
-  to∘from i (sup (inj₁ tt , f)) = sup (inj₁ tt , h i)
-    where
-    h : (λ ()) ≡ f
-    h i ()
-  to∘from i (sup (inj₂ a , f)) = sup (inj₂ a , λ{ tt → to∘from i (f tt) })
-  
+  to∘from : (w : W ⊤⊎A×Xᶜ) → to (from w) ≡ w
+  to∘from (sup (inj₁ tt , f)) = cong sup (Eq⟦⟧-to-≡ (refl , λ ()))
+  to∘from (sup (inj₂ y , f)) = cong sup (Eq⟦⟧-to-≡ (refl , λ{ tt → to∘from (f tt) }))
+
 {- Weird List -}
 
 data LList (X : Set) : Set where
@@ -295,11 +357,11 @@ module LList-Cont where
 
   {- ⟦ S ◃ P ⟧ X
   -- ≃ ⊤ ⊎ X × ⟦ S ◃ P ⟧ ⟦ S ◃ P ⟧ X
-  -- ≃ ⟦ ⊤ᶜ ⟧ X ⊎ ⟦ Iᶜ ⟧ X × ⟦ S ◃ P ⟧ ⟦ S ◃ P ⟧ X
+  -- ≃ (⊤ ◃ λ _ → ⊥) X ⊎ (⊤ ◃ λ _ ⊤) X × ⟦ S ◃ P ⟧ ⟦ S ◃ P ⟧ X
   -- 
   -- S ◃ P
-  -- ≃ ⊤ᶜ ⊎ᶜ Iᶜ ×ᶜ ((S ◃ P) ⊗ᶜ (S ◃ P))
-  -- ≃ ⊤ᶜ ⊎ᶜ Iᶜ ×ᶜ (Σ[ s ∈ S ] (P s → S) ◃ λ (s , f) → Σ[ p ∈ P s ] P (f p))
+  -- ≃ ⊤ᶜ ⊎ᶜ (⊤ ◃ λ _ → ⊤) ×ᶜ ((S ◃ P) ⊗ᶜ (S ◃ P))
+  -- ≃ ⊤ᶜ ⊎ᶜ (⊤ ◃ λ _ → ⊤) ×ᶜ (Σ[ s ∈ S ] (P s → S) ◃ λ (s , f) → Σ[ p ∈ P s ] P (f p))
   -- ≃ ⊤ᶜ ⊎ᶜ Σ[ s ∈ S ] (P s → S) ◃ λ (s , f) → ⊤ ⊎ Σ[ p ∈ P s ] (⊤ ⊎ P (f p))
   -- ≃ (⊤ ⊎ Σ[ s ∈ S ] (P s → S))
      ◃ case (λ{ tt → ⊥ }) (λ{ (s , f) → ⊤ ⊎ Σ[ p ∈ P s ] P (f p) })
@@ -381,8 +443,10 @@ module ℍ-Func-Func where
     _∘nt_ : {F₁ F₂ F₃ : Func} → NatTrans F₂ F₃ → NatTrans F₁ F₂ → NatTrans F₁ F₃
     (α ∘nt β) X x = α X (β X x)
 
-    commute𝕃List : _∘nt_ {ℍ 𝕃List} {𝕃List} {𝔽} fold𝕃List in𝕃List
-      ≡ _∘nt_ {ℍ 𝕃List} {ℍ 𝔽} {𝔽} α (ℍ₁ {𝕃List} {𝔽} fold𝕃List)
+{-
+  commute𝕃List : (a : ℍ 𝕃List) (X : Set) → ?
+      → fold𝕃List X (in𝕃List X a) ≡ 
+      ≡ α X (ℍ₁ fold𝕃List X a)
     commute𝕃List i X (inj₁ tt) = α X (inj₁ tt)  
     commute𝕃List i X (inj₂ (x , xxs)) = α X (inj₂ (x , fold𝕃List (F X) (LList₁ (fold𝕃List X) xxs)))
 
@@ -414,7 +478,7 @@ module ℍ-Func-Cont where
     h' (inj₂ (s , f)) (inj₁ tt) = inj₁ tt
     h' (inj₂ (s , f)) (inj₂ (p , p')) = inj₂ (h s p , h (f (h s p)) p')
 
-  module _ (TQ : Cont) (inTinQ : ℍ TQ →ᶜ TQ) where
+  module _ (TQ : Cont) (ab : ℍ TQ →ᶜ TQ) where
 
     -- ℍ LListᶜ → ℍ TQ
     --   ↓        ↓
@@ -422,31 +486,30 @@ module ℍ-Func-Cont where
 
     open LList-Cont
 
-    {-
     inLListᶜ : ℍ LListᶜ →ᶜ LListᶜ
-    inLListᶜ = InS ◃ {!InP!}
-    -}
-    
-    open Cont TQ renaming (S to T; P to Q)
-    open _→ᶜ_ inTinQ renaming (g to inT; h to inQ)
-
-    foldLListᶜ : (S ◃ P) →ᶜ (T ◃ Q)
-    foldLListᶜ = foldS ◃ foldP
+    inLListᶜ = g ◃ h
       where
-      foldS : S → T
-      foldP : (s : S) → Q (foldS s) → P s
-
-      foldS (InS (inj₁ tt)) = inT (inj₁ tt)
-      foldS (InS (inj₂ (s , f))) = inT (inj₂ (foldS s , foldS ∘ f ∘ foldP s))
-
-      foldP (InS (inj₁ tt)) q with inQ (inj₁ tt) q
-      ... | ()
-      foldP (InS (inj₂ (s , f))) q with inQ (inj₂ (foldS s , foldS ∘ f ∘ foldP s)) q
-      ... | inj₁ tt = InP (inj₁ tt)
-      ... | inj₂ (q , qfq) = InP (inj₂ (foldP s q , foldP (f (foldP s q)) qfq))
-
+      open Cont (ℍ LListᶜ) renaming (S to S'; P to P')
       
+      g : S' → S
+      g (inj₁ tt) = InS (inj₁ tt)
+      g (inj₂ (s , f)) = InS (inj₂ (s , f))
+
+      h : (s' : S') → P (g s') → P' s'
+      h (inj₂ (s , f)) (InP (inj₁ tt)) = inj₁ tt
+      h (inj₂ (s , f)) (InP (inj₂ (p , p'))) = inj₂ (p , p')
+
+    open Cont TQ renaming (S to T; P to Q)
+    open _→ᶜ_ ab renaming (g to a; h to b)
+
     {-
+    foldLListᶜ : (S ◃ P) →ᶜ (T ◃ Q)
+    foldLListᶜ = g ◃ {!!}
+      where
+      g : S → T
+      g (InS (inj₁ tt)) = a (inj₁ tt)
+      g (InS (inj₂ (s , f))) = a (inj₂ (g s , {!!}))
+
     commuteLListᶜ : foldLListᶜ ∘ᶜ₁ inLListᶜ ≡ gh ∘ᶜ₁ ℍ₁ foldLListᶜ
     commuteLListᶜ = {!!}
     -}
@@ -514,6 +577,7 @@ app H F = appS H F ◃ appP H F
 ≃ Σ s : S, (⟦ ⊤ ◃ λ _ → PX s ⟧ X) × (⟦ Πᶜ pf : PF s, TQ ⊗ᶜ app (RF s pf) TQ ⟧ X)
 ≃ Σ s : S, ⟦ (⊤ ◃ λ _ → PX s) ×ᶜ (Πᶜ pf : PF s, TQ ⊗ᶜ app (RF s pf) TQ) ⟧ X
 ≃ ⟦ Σᶜ s : S, (⊤ ◃ λ _ → PX s) ×ᶜ (Πᶜ pf : PF s, TQ ⊗ᶜ (app (RF s pf) TQ)) ⟧ X
+≃ ⟦ Σᶜ s : S, (⊤ ◃ λ _ → PX s) ×ᶜ (Πᶜ pf : PF s, TQ ⊗ᶜ (app (RF s pf) TQ)) ⟧ X
 ≃ ⟦ app (S ◃ PX + PF + RF) TQ ⟧ X
 -}
 
@@ -535,9 +599,9 @@ module H-Cont-Cont where
 
   module _ (UV : Cont) (ab : app ℍ²ᶜ UV →ᶜ UV) where
 
-  -- app ℍ²ᶜ LListᶜ → app ℍ²ᶜ UV
+  -- app ℍ²ᶜ LListᶜ → app ℍ²ᶜ TQ
   --       ↓               ↓
-  --     LListᶜ     →     UV
+  --     LListᶜ     →     TQ
 
   open 2Cont ℍ²ᶜ
   open LList-Cont renaming (S to T; P to Q)
@@ -552,25 +616,47 @@ module H-Cont-Cont where
 
 {- Second-order W -}
 
-{-# NO_POSITIVITY_CHECK #-}
-data 2WS (H : 2Cont) : Set
+{-
+appS : 2Cont → Cont → Set
+appS (S ◃ PX + PF + RF) (T ◃ Q) = Σ[ s ∈ S ] ((pf : PF s) → Σ[ t ∈ T ] (Q t → appS (RF s pf) (T ◃ Q)))
+-}
 
-{-# TERMINATING #-}
-2WP : (H : 2Cont) → 2WS H → Set
+{-
+record 2WS (H : 2Cont) : Set
 
-data 2WS H where
-  2supS : appS H (2WS H ◃ 2WP H) → 2WS H
+record 2WP (H : 2Cont) (s : 2WS H) : Set
 
-2WP H (2supS s) = appP H (2WS H ◃ 2WP H) s
+record 2WS H where
+  constructor 2supS
+  inductive
+  pattern
+  open 2Cont H
+  field
+    2infS : Σ[ s ∈ S ] ((pf : PF s) → {!!})
 
+record 2WP H s where
+  constructor 2supP
+  inductive
+  pattern
+  field
+    2infP : {!!}
+-}  
+
+{-
+2WP (S ◃ PX + PF + RF) (2supS (s , f))
+  = Σ[ pf ∈ PF s ] let (t , g) = f pf in Σ[ q ∈ 2WP (S ◃ PX + PF + RF) t ]
+  appP (RF s pf) (2WS (S ◃ PX + PF + RF) ◃ 2WP (S ◃ PX + PF + RF)) (g q)
+-}
+{-
 2W : 2Cont → Cont
 2W H = 2WS H ◃ 2WP H
 
-2supP : {H : 2Cont} (s : appS H (2WS H ◃ 2WP H)) → 2WP H (2supS s) → appP H (2WS H ◃ 2WP H) s
-2supP s x = x
+2supP : {H : 2Cont} → (s : appS H (2WS H ◃ 2WP H)) → 2WP H (2supS s) → appP H (2WS H ◃ 2WP H) s
+2supP s x = {!!}
 
 2sup : {H : 2Cont} → app H (2W H) →ᶜ 2W H
 2sup = 2supS ◃ 2supP
+-}
 
 {-
 module _ (TQ : Cont) (ab : app ℍ²ᶜ TQ →ᶜ TQ) where
@@ -620,3 +706,4 @@ module category-of-2containers where
     ◃ (λ (s , t) → PX s ⊎ QX t)
     + (λ (s , t) → PF s ⊎ QF t)
     + λ{ (s , t) (inj₁ p) → RF s p ; (s , t) (inj₂ q) → LF t q }
+-}

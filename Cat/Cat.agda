@@ -1,6 +1,6 @@
 {-# OPTIONS --cubical --guardedness --type-in-type #-}
 
-module Cat where
+module Cat.Cat where
 
 open import Cubical.Foundations.Prelude
 
@@ -13,5 +13,5 @@ record Cat : Type where
     _∘_ : {A B C : Obj} → Hom B C → Hom A B → Hom A C
     idl : {A B : Obj} (f : Hom A B) → id ∘ f ≡ f
     idr : {A B : Obj} (f : Hom A B) → f ∘ id ≡ f
-    ass : {A B C D : Obj} (h : Hom C D) (g : Hom B C) (f : Hom A B) →
-           (h ∘ g) ∘ f ≡ h ∘ (g ∘ f)
+    ass : {A B C D : Obj} (f : Hom C D) (g : Hom B C) (h : Hom A B)
+        → f ∘ (g ∘ h) ≡ (f ∘ g) ∘ h

@@ -1,12 +1,30 @@
-{-# OPTIONS --cubical --guardedness #-}
+{-# OPTIONS --guardedness #-}
 
 module Cont.SCWF where
 
-open import Cubical.Foundations.Prelude
-open import Cubical.Data.Empty
-open import Cubical.Data.Unit renaming (Unit to ⊤)
-open import Cubical.Data.Sum renaming (inl to inj₁; inr to inj₂)
-open import Cubical.Data.Sigma renaming (fst to proj₁; snd to proj₂)
+open import Data.Empty
+open import Data.Unit
+open import Data.Sum
+open import Data.Product
+open import Function.Base
+
+open import Relation.Binary.PropositionalEquality
+
+postulate
+  funExt : {ℓ ℓ' : _} {A : Set ℓ} {B : A → Set ℓ'} {f g : (x : A) → B x}
+    → ((x : A) → f x ≡ g x)
+    → f ≡ g
+
+funExt₂ : {ℓ ℓ' ℓ'' : _} {A : Set ℓ} {B : A → Set ℓ'} {C : (x : A) → B x → Set ℓ''}
+  {f g : (x : A) (y : B x) → C x y}
+  → ((x : A) (y : B x) → f x y ≡ g x y)
+  → f ≡ g
+funExt₂ h = funExt (funExt ∘ h)
+
+funExt⁻ : {A : Set} {B : A → Set} {f g : (x : A) → B x}
+  → f ≡ g
+  → (x : A) → f x ≡ g x
+funExt⁻ refl x = refl
 
 {-- Syntax --}
   
@@ -260,7 +278,7 @@ infix 2 Πnf-syntax
 Πnf-syntax = Πnf
 syntax Πnf-syntax A (λ x → B) = Πnf[ x ∈ A ] B
 
-data Nfs : Con → Con → Type₁ where
+data Nfs : Con → Con → Set₁ where
   ε   : Nfs Γ ∙
   _,_ : Nfs Δ Γ → Nf Δ A → Nfs Δ (Γ ▹ A)
 
@@ -326,3 +344,50 @@ nvs t = t [ wk ]nf
 
 ,∘ : (γ , t) ∘nfs δ ≡ (γ ∘nfs δ , t [ δ ]nf)
 ,∘ = refl
+
+lem1 : (nvar vz [ γ , t ]nf) ≡ t
+lem1 {Γ} {Δ} {γ} {A} {t} = {!!}
+
+lem2 : (wkNfs vz idNfs ∘nfs (γ , t)) ≡ γ
+lem2 = {!!}
+
+idl : {Γ Δ : Con} {γ : Nfs Δ Γ} → idNfs ∘nfs γ ≡ γ
+idl {Γ} {Δ} {ε} = refl
+idl {Γ} {Δ} {γ , t} = cong₂ _,_ lem2 lem1
+
+transport : ∀ {A B : Set} → A ≡ B → A → B
+transport {A} {B} p x = subst (λ X → X) p x
+
+ne≡ : {B : Ty} {S T : Set} {P : {A : Ty} (x : Var Γ A) (s : S) → Set}
+  {Q : {A : Ty} (x : Var Γ A) (t : T) → Set}
+  {R : {A : Ty} (x : Var Γ A) (s : S) (p : P x s) → Sp Γ A B}
+  {L : {A : Ty} (x : Var Γ A) (t : T) (q : Q x t) → Sp Γ A B}
+  → (eqS : S ≡ T)
+  → (eqP : {A : Ty} (x : Var Γ A) (s : S) → P x s ≡ Q x (transport eqS s))
+  → (eqR : {A : Ty} (x : Var Γ A) (s : S) (p : P x s)
+    → R x s p ≡ L x (transport eqS s) (transport (eqP x s) p))
+  → _≡_ {A = Ne Γ B} (S ◃ P ◃ R) (T ◃ Q ◃ L)
+ne≡ refl eqP eqR = {!!}
+
+[id] : {Γ : Con} {A : Ty} {t : Nf Γ A} → t [ idNfs ]nf ≡ t
+[id] {Γ} {A ⇒ B} {lam t} = cong lam [id]
+[id] {Γ} {*} {ne (S ◃ P ◃ R)} = cong ne (ne≡ {!!} {!!} {!!})
+
+[∘] : {Γ Δ Θ : Con} {A : Ty} {t : Nf Γ A} {γ : Nfs Δ Γ} {δ : Nfs Θ Δ}
+  → t [ γ ∘nfs δ ]nf ≡ ((t [ γ ]nf) [ δ ]nf)
+[∘] = {!!}
+
+idr : {Γ Δ : Con} {γ : Nfs Δ Γ} → γ ∘nfs idNfs ≡ γ
+idr {Γ} {Δ} {ε} = refl
+idr {Γ} {Δ} {γ , t} = cong₂ _,_ idr [id]
+
+ass : {Γ Δ Θ Ξ : Con} {γ : Nfs Δ Γ} {δ : Nfs Θ Δ} {θ : Nfs Ξ Θ}
+   → (γ ∘nfs δ) ∘nfs θ ≡ γ ∘nfs (δ ∘nfs θ)
+ass {Γ} {Δ} {Θ} {Ξ} {ε} {δ} {θ} = refl
+ass {Γ ▹ A} {Δ} {Θ} {Ξ} {γ , t} {δ} {θ} = cong₂ _,_ ass (sym ([∘] {t = t} {γ = δ} {δ = θ}))
+
+εNfs : {Γ : Con} → Nfs Γ ∙
+εNfs {Γ} = ε
+
+∙-η : {Γ : Con}{γ : Nfs Γ ∙} → γ ≡ ε
+∙-η {Γ} {ε} = refl

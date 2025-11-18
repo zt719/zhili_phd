@@ -7,8 +7,6 @@ open import Data.Sum
 open import Data.Product
 open import Function.Base
 
-{-- Syntax --}
-  
 {- Types & Contexts & Variables -}
 
 infixr 20 _⇒_
@@ -380,7 +378,6 @@ ne {Γ} {S ◃ P ◃ R} {T ◃ Q ◃ L} (f ◃ g ◃ h) [ x := w ]Hom = ne (f′
 -- napp₁ : (t : Nf Γ (A ⇒ B)) {u w : Nf Γ A} → NfHom Γ u w → NfHom Γ (napp t u) (napp t w)
 -- napp₁ (lam t) f = {!!}
 
-
 {-
 !nf : (t : Nf Γ A) → NfHom Γ t ⊤nf
 !nf (lam t) = lam (!nf t)
@@ -491,16 +488,14 @@ data Tm : Con → Ty → Set₁ where
   Πtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
   Σtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
 
-{-
 {- Normalization -}
 
 nf : Tm Γ A → Nf Γ A
 nf (var x) = nvar x
 nf (lam t) = lam (nf t)
 nf (app t u) = napp (nf t) (nf u)
-nf (Πtm I t⃗) = Πnf I (nf ∘ t⃗)
-nf (Σtm I t⃗) = Σnf I (nf ∘ t⃗)
--}
+nf (Πtm I f) = Πnf I (nf ∘ f)
+nf (Σtm I f) = Σnf I (nf ∘ f)
 
 {- Embedding -}
 
@@ -514,4 +509,15 @@ emb {Γ} {A} (ne (S ◃ P ◃ R))
 
 embSp ε u = u
 embSp (t , ts) u = embSp ts (app u (emb t))
+
+{- ... -}
+
+H' : ((Set → Set) → Set) → (Set → Set) → Set
+H' G F = F (G F)
+
+data H (G : (Set → Set) → Set) (F : Set → Set) : Set where
+  mkH : F (G F) → H G F
+
+HH : HCont (((* ⇒ *) ⇒ *) ⇒ (* ⇒ *) ⇒ *)
+HH = lam (lam (napp (nvar vz) (napp (nvar (vs vz)) (nvar vz))))
 

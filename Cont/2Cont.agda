@@ -2,103 +2,148 @@
 
 module Cont.2Cont where
 
+open import Data.Empty
+open import Data.Unit
+open import Data.Sum
+open import Data.Product
+open import Function.Base
+open import Relation.Binary.PropositionalEquality hiding ([_]; J)
+
 open import Cont.Cont
 
 record 2Cont : Set₁ where
-  constructor _◃_+_+_
   inductive
-  eta-equality
+  pattern
+  constructor _◃_+_+_
   field
     S : Set
     PX : S → Set
     PF : S → Set
     RF : (s : S) → PF s → 2Cont
 
-record 2ContHom (SPR TQL : 2Cont) : Set where
-  constructor _◃_+_+_
-  inductive
-  eta-equality
-  open 2Cont SPR
-  open 2Cont TQL renaming (S to T; PX to QX; PF to QF; RF to LF)
-  field
-    f : S → T
-    gx : (s : S) → QX (f s) → PX s
-    gf : (s : S) → QF (f s) → PF s
-    hf : (s : S) (qf : QF (f s)) → 2ContHom (RF s (gf s qf)) (LF (f s) qf) 
+variable H J : 2Cont
 
-{-
-record 2⟦_⟧ (SPR : 2Cont) (F : Cont) (X : Set) : Set where
-  constructor _,_,_
+record 2⟦_⟧ (SPPR : 2Cont) (F : Cont) (X : Set) : Set where
   inductive
-  eta-equality
-  open 2Cont SPR
+  pattern
+  open 2Cont SPPR
   field
     s : S
     kx : PX s → X
     kf : (pf : PF s) → ⟦ F ⟧ (2⟦ RF s pf ⟧ F X)
 
-{-# NO_POSITIVITY_CHECK #-}
-record 2⟦_⟧' (SPR : 2Cont) (F : Set → Set) (X : Set) : Set where
-  --  constructor _+_+_
-  inductive
-  eta-equality
-  open 2Cont SPR
-  field
-    s : S
-    kx : PX s → X
-    kf : (pf : PF s) → F (2⟦ RF s pf ⟧' F X)
-
-{-# TERMINATING #-}
-2⟦_⟧₁ : (SPR : 2Cont)
-  → {F G : Cont} → ContHom F G
-  → {X Y : Set} → (X → Y)
-  → 2⟦ SPR ⟧ F X → 2⟦ SPR ⟧ G Y
-2⟦ SPR ⟧₁ {F} {G} α {X} {Y} f (s , kx , kf) =
-  s , (λ px → f (kx px)) , (λ pf → ⟦ α ⟧ContHom (2⟦ RF s pf ⟧ G Y) (⟦ F ⟧₁ (2⟦ RF s pf ⟧₁ α f) (kf pf)))
-  where open 2Cont SPR
-
-{-# TERMINATING #-}
-2⟦_⟧Hom : {H J : 2Cont} → 2ContHom H J
-  → (F : Cont) (X : Set)
-  → 2⟦ H ⟧ F X → 2⟦ J ⟧ F X
-2⟦ f ◃ gx + gf + hf ⟧Hom F X (s , kx , kf) = f s , (λ px → kx (gx s px)) , (λ pf → ⟦ F ⟧₁ (2⟦ hf s pf ⟧Hom F X) (kf (gf s pf)))
--}
-
-{-# TERMINATING #-}
-⟦_⟧' : 2Cont → Cont → Cont
-⟦ S ◃ PX + PF + RF ⟧' TQ
-  = (S ◃ PX) ×C (ΣC[ s ∈ S ] ΠC[ pf ∈ PF s ] TQ ∘C ⟦ RF s pf ⟧' TQ)
-
-open import Data.Sum
-open import Data.Product
+app' : 2Cont → Cont → Cont
+app' (S ◃ PX + PF + RF) TQ
+  = Σᶜ[ s ∈ S ] ((⊤ ◃ λ _ → PX s) ×ᶜ (Πᶜ[ pf ∈ PF s ] (TQ ⊗ᶜ app' (RF s pf) TQ)))
 
 {-
-{-# TERMINATING #-}
-2W : 2Cont → Cont
+  IH : (s : S) (pf : PF s) → 2⟦ RF s pf ⟧ TQ X ≃ ⟦ app (RF s pf) TQ ⟧ X
+
+  2⟦ S ◃ PX + PF + RF ⟧ TQ X
+≃ Σ s : S, (PX s → X) × ((pf : PF s) → ⟦ TQ ⟧ (2⟦ RF s pf ⟧ TQ X))
+≃ Σ s : S, (PX s → X) × ((pf : PF s) → ⟦ TQ ⟧ (⟦ app (RF s pf) TQ ⟧ X))
+≃ Σ s : S, (PX s → X) × ((pf : PF s) → ⟦ TQ ⊗ᶜ app (RF s pf) TQ ⟧ X)
+≃ Σ s : S, (PX s → X) × (⟦ Πᶜ pf : PF s, TQ ⊗ᶜ app (RF s pf) TQ ⟧ X)
+≃ Σ s : S, (⟦ ⊤ ◃ λ _ → PX s ⟧ X) × (⟦ Πᶜ pf : PF s, TQ ⊗ᶜ app (RF s pf) TQ ⟧ X)
+≃ Σ s : S, ⟦ (⊤ ◃ λ _ → PX s) ×ᶜ (Πᶜ pf : PF s, TQ ⊗ᶜ app (RF s pf) TQ) ⟧ X
+≃ ⟦ Σᶜ s : S, (⊤ ◃ λ _ → PX s) ×ᶜ (Πᶜ pf : PF s, TQ ⊗ᶜ (app (RF s pf) TQ)) ⟧ X
+≃ ⟦ app (S ◃ PX + PF + RF) TQ ⟧ X
+-}
+
+appS : 2Cont → Cont → Set
+appS (S ◃ PX + PF + RF) (T ◃ Q) = Σ[ s ∈ S ] ((pf : PF s) → Σ[ t ∈ T ] (Q t → (appS (RF s pf) (T ◃ Q))))
+
+appP : (H : 2Cont) (F : Cont) → appS H F → Set
+appP (S ◃ PX + PF + RF) (T ◃ Q) (s , f) = Σ[ pf ∈ PF s ] let (t , g) = f pf in Σ[ q ∈ Q t ] (appP (RF s pf) (T ◃ Q) (g q) ⊎ PX s) 
+
+app : 2Cont → Cont → Cont
+app H F = appS H F ◃ appP H F
+
+appS₁ : (SPPR : 2Cont) → TQ →ᶜ UV → appS SPPR TQ → appS SPPR UV
+appS₁ (S ◃ PX + PF + RF) (g ◃ h) (s , f)
+  = s , λ pf → let (t , f') = f pf in
+    g t , λ u → appS₁ (RF s pf) (g ◃ h) (f' (h t u))
+
+appP₁ : (SPPR : 2Cont) (gh : TQ →ᶜ UV) (s : appS SPPR TQ) → appP SPPR UV (appS₁ SPPR gh s) → appP SPPR TQ s
+appP₁ (S ◃ PX + PF + RF) (g ◃ h) (s , f) (pf , (u , inj₁ p'))
+  = let (t , f') = f pf in pf , (h t u , inj₁ (appP₁ (RF s pf) (g ◃ h) (f' (h t u)) p'))
+appP₁ (S ◃ PX + PF + RF) (g ◃ h) (s , f) (pf , (u , inj₂ px))
+  = let (t , f') = f pf in (pf , (h t u , inj₂ px))
+
+app₁ : (H : 2Cont) → SP →ᶜ TQ → app H SP →ᶜ app H TQ
+app₁ H gh = appS₁ H gh ◃ appP₁ H gh
+
 
 {-# NO_POSITIVITY_CHECK #-}
-record 2WS (H : 2Cont) : Set
+data 2WS (H : 2Cont) : Set
 
 {-# TERMINATING #-}
 2WP : (H : 2Cont) → 2WS H → Set
 
-record 2WS H where
+data 2WS H where
+  2supS : appS H (2WS H ◃ 2WP H) → 2WS H
+
+2WP H (2supS s) = appP H (2WS H ◃ 2WP H) s
+
+2supP : {H : 2Cont} (s : appS H (2WS H ◃ 2WP H)) → 2WP H (2supS s) → appP H (2WS H ◃ 2WP H) s
+2supP s p = p
+
+2W : 2Cont → Cont
+2W H = 2WS H ◃ 2WP H
+
+2sup : {H : 2Cont} → app H (2W H) →ᶜ 2W H
+2sup {H} = 2supS ◃ 2supP {H}
+
+
+--        app₁ H fold2W  
+--  app H (2W H)  →  appH TQ  
+--
+-- 2sup ↓               ↓ inTQ
+--
+--     2W H       →   TQ
+--           fold2W
+
+⊤²ᶜ : 2Cont
+⊤²ᶜ = ⊤ ◃ (λ _ → ⊥) + (λ _ → ⊥) + λ _ ()
+
+⊥²ᶜ : 2Cont
+⊥²ᶜ = ⊥ ◃ (λ ()) + (λ ()) + λ ()
+
+_×²ᶜ_ : 2Cont → 2Cont → 2Cont
+(S ◃ PX + PF + RF) ×²ᶜ (T ◃ QX + QF + LF)
+  = (S × T)
+  ◃ (λ (s , t) → PX s ⊎ QX t)
+  + (λ (s , t) → PF s ⊎ QF t)
+  + λ{ (s , t) (inj₁ p) → RF s p ; (s , t) (inj₂ q) → LF t q }
+
+_⊎²ᶜ_ : 2Cont → 2Cont → 2Cont
+(S ◃ PX + PF + RF) ⊎²ᶜ (T ◃ QX + QF + LF)
+   = (S ⊎ T)
+   ◃ (λ{ (inj₁ s) → PX s ; (inj₂ t) → QX t })
+   + (λ{ (inj₁ s) → PF s ; (inj₂ t) → QF t })
+   + λ{ (inj₁ s) pf → RF s pf ; (inj₂ t) qf → LF t qf }
+
+{- ... -}
+
+record _→²ᶜ_ (SPPR TQQL : 2Cont) : Set₁ where
   inductive
-  eta-equality
-  open 2Cont H
-  open Cont (2W H) renaming (S to T; P to Q)
+  constructor _+_+_+_
+  pattern
+  open 2Cont SPPR
+  open 2Cont TQQL renaming (S to T; PX to QX; PF to QF; RF to LF)
   field
-    sx : S
-    sf : S
-    h : (pf : PF sf) → Σ[ t ∈ T ] (Q t → (⟦ RF sf pf ⟧' (T ◃ Q)) .Cont.S)
+    g : S → T
+    hx : (s : S) → QX (g s) → PX s
+    hf : (s : S) → QF (g s) → PF s
+    kf : (s : S) (q : QF (g s)) → RF s (hf s q) →²ᶜ LF (g s) q
 
-2WP (S ◃ PX + PF + RF) record { sx = sx ; sf = sf ; h = h }
-  = PX sx ⊎ Σ[ pf ∈ PF sf ] let (t , f) = h pf in Σ[ q ∈ Q t ] (⟦ RF sf pf ⟧' (T ◃ Q)) .Cont.P (f q)
+⟦_⟧→²ᶜ : H →²ᶜ J → (UV : Cont) → app H UV →ᶜ app J UV
+⟦ α ⟧→²ᶜ UV = g' α UV ◃ h' α UV
   where
-  open Cont (2W (S ◃ PX + PF + RF)) renaming (S to T; P to Q)
+  g' : H →²ᶜ J → (UV : Cont) → appS H UV → appS J UV
+  g' {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (g + hx + hf + kf) UV (s , f)
+    = g s , λ qf → let (u , f') = f (hf s qf) in u , λ v → g' (kf s qf) UV (f' v)
 
-2W SPPR = 2WS SPPR ◃ 2WP SPPR
--}
-
--- 2sup : {SPPR : 2Cont} → ContHom (⟦ SPPR ⟧' (2W SPPR)) 2W SPPR
--- 2sup = ?
+  h' : (α : H →²ᶜ J) (UV : Cont) (s' : appS H UV) → appP J UV (g' α UV s') → appP H UV s'
+  h' {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (g + hx + hf + kf) UV (s , f) (qf , v , inj₁ idk) = let (u , f') = f (hf s qf) in hf s qf , v , inj₁ (h' (kf s qf) UV (f' v) idk)
+  h' {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (g + hx + hf + kf) UV (s , f) (qf , v , inj₂ qx) = hf s qf , v , inj₂ (hx s qx)
