@@ -41,23 +41,33 @@ symP p i = p (~ i)
 
 module _ {A : Type ℓ} {x y : A} {p : Path A x y} where
 
+  drop-i : PathP (λ i → Path A x y) p p
+  drop-i i j = p j
+
+  drop-j : PathP (λ i → Path A (p i) (p i)) refl refl
+  drop-j i j = p i
+
+  --      refl        |         p
+  --    x  ⇒  x       |      x  ⇒  y    
+  --  p ⇓     ⇓ p     | refl ⇓     ⇓ refl
+  --    y  ⇒  y       |      x  ⇒  y
+  --      refl        |         p
+  --                  |
+  --     drop-i       |       drop-j
+
   ∧-conn : PathP (λ i → Path A x (p i)) refl p
   ∧-conn i j = p (i ∧ j)
-  
-  --           refl i
-  --        x    ⇒    x
-  -- refl j ⇓         ⇓ p j
-  --        x    ⇒    y
-  --            p i
-  
+
   ∨-conn : PathP (λ i → Path A (p i) y) p refl
   ∨-conn i j = p (i ∨ j)
   
-  --          p i
-  --      x    ⇒     y
-  --  p j ⇓          ⇓ refl j
-  --      y    ⇒     y
-  --         refl i
+  --        refl      |      p
+  --      x  ⇒  x     |   x  ⇒  y
+  -- refl ⇓     ⇓ p   | p ⇓     ⇓ refl
+  --      x  ⇒  y     |   y  ⇒  y
+  --         p        |     refl
+  --                  |
+  --      ∧-conn      |    ∨-conn
 
 Square : (A : Type ℓ)
   → {a00 a01 a10 a11 : A}
@@ -95,11 +105,13 @@ funextd p i x = p x i
 
 {- Transp -}
 
+transport : {A B : Type ℓ} → Path (Type ℓ) A B → A → B
+transport p a = transp (λ i → p i) i0 a
 
 subst : {A : Type ℓ} (B : A → Type ℓ')
   → {x y : A} → Path A x y
   → B x → B y
-subst B p b = transp (λ i → B (p i)) i0 b
+subst B p b = transport (ap B p) b
 
 subst-refl : {A : Type ℓ} (B : A → Type ℓ')
   → {x y : A} (b : B x)
@@ -125,8 +137,6 @@ subst₂ : {A : Type ℓ} {B : A → Type ℓ'} (C : (x : A) → B x → Type �
   → C x bx → C y by
 subst₂ C p q c = transp (λ i → C (p i) (q i)) i0 c
 
-transport : {A B : Type ℓ} → Path (Type ℓ) A B → A → B
-transport p a = transp (λ i → p i) i0 a
 
 transport-refl : {A : Type ℓ} (x : A) → Path A (transport refl x) x
 transport-refl {A = A} x i = transp (λ i → A) i x

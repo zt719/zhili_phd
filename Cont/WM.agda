@@ -20,11 +20,13 @@ module _ (X : Set) (α : ⟦ SP ⟧ X → X) where
   commuteW : (sf : ⟦ SP ⟧ (W SP)) → foldW (sup sf) ≡ α (⟦ SP ⟧₁ foldW sf)
   commuteW sf = refl
 
+{-
   !fold : (foldW' : W SP → X)
     (commuteW' : (sf : ⟦ SP ⟧ (W SP)) → foldW' (sup sf) ≡ α (⟦ SP ⟧₁ foldW' sf)) → 
     (w : W SP) → foldW' w ≡ foldW w
   !fold foldW' commuteW' (sup (s , f))
     = trans (commuteW' (s , f)) (cong α (⟦⟧≡ refl λ p → !fold foldW' commuteW' (f p)))
+-}
 
 recW : {S : Set} {P : S → Set}
   → (Q : W (S ◃ P) → Set)

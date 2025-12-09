@@ -2,6 +2,8 @@
 
 open import Cubical.Foundations.Prelude
 
+module Logic where
+
 {- Propositional Truncation (Squash Type) -}
 
 variable A B : Type

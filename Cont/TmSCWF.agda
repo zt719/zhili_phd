@@ -1,6 +1,18 @@
-module Hereditary where
+{-# OPTIONS --guardedness #-}
+
+module Cont.TmSCWF where
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
+
+postulate
+  funExt : {ℓ ℓ' : _} {A : Set ℓ} {B : A → Set ℓ'} {f g : (x : A) → B x}
+    → ((x : A) → f x ≡ g x)
+    → f ≡ g
+    
+funExt⁻ : {A : Set} {B : A → Set} {f g : (x : A) → B x}
+  → f ≡ g
+  → (x : A) → f x ≡ g x
+funExt⁻ refl x = refl
 
 {-- Syntax --}
   
@@ -30,6 +42,8 @@ data Tm : Con → Ty → Set₁ where
   var : (x : Var Γ A) → Tm Γ A
   lam : (t : Tm (Γ ▹ A) B) → Tm Γ (A ⇒ B)
   app : (t : Tm Γ (A ⇒ B)) (u : Tm Γ A) → Tm Γ B
+  Π : (I : Set) (f : I → Tm Γ A) → Tm Γ A
+  Σ : (I : Set) (f : I → Tm Γ A) → Tm Γ A
 
 variable t u : Tm Γ A
 
@@ -53,6 +67,8 @@ wkTm : (x : Var Γ A) (t : Tm (Γ - x) B) → Tm Γ B
 wkTm x (var v) = var (wkv x v)
 wkTm x (lam t) = lam (wkTm (vs x) t)
 wkTm x (app t u) = app (wkTm x t) (wkTm x u)
+wkTm x (Π I f) = Π I (λ i → wkTm x (f i))
+wkTm x (Σ I f) = Σ I (λ i → wkTm x (f i))
 
 wkTms : (x : Var Δ A) (γ : Tms (Δ - x) Γ) → Tms Δ Γ
 wkTms x ε = ε
@@ -69,6 +85,8 @@ _[_] : (t : Tm Γ A) (γ : Tms Δ Γ) → Tm Δ A
 var x [ γ ] = x [ γ ]v
 lam t [ γ ] = lam (t [ γ ↑ _ ])
 app t u [ γ ] = app (t [ γ ]) (u [ γ ])
+Π I f [ γ ] = Π I (λ i → f i [ γ ])
+Σ I f [ γ ] = Σ I (λ i → f i [ γ ])
 
 id : Tms Γ Γ
 id {∙} = ε
@@ -115,16 +133,18 @@ nat[]v {x = vs x} {γ = γ , t} = nat[]v {x = x}
 [id] {t = var x} = [id]v {x = x}
 [id] {t = lam t} = cong lam [id]
 [id] {t = app t u} = cong₂ app [id] [id]
+[id] {t = Π I x} = cong (Π I) (funExt λ i → [id])
+[id] {t = Σ I x} = cong (Σ I) (funExt λ i → [id])
 
 [∘]v : x [ γ ∘ δ ]v ≡ x [ γ ]v [ δ ]
 [∘]v {x = vz} {γ = γ , t} = refl
 [∘]v {x = vs x} {γ = γ , t} = [∘]v {x = x}
 
-tz : Tm (Γ ▹ A) A
-tz = var vz
+tvz : Tm (Γ ▹ A) A
+tvz = var vz
 
-ts : Tm Γ A → Tm (Γ ▹ B) A
-ts t = wkTm vz t
+tvs : Tm Γ A → Tm (Γ ▹ B) A
+tvs t = wkTm vz t
 
 {-
 _++_ : (Γ Δ : Con) → Con
@@ -140,12 +160,12 @@ _↑↑_ : (γ : Tms Δ Γ) (Θ : Con) → Tms (Δ ++ Θ) (Γ ++ Θ)
 γ ↑↑ (Θ ▹ A) = (γ ↑↑ Θ) ↑ A
 -}
 
-{-
 nat : t [ wkTms vz γ ] ≡ wkTm vz (t [ γ ])
 nat {t = var x} = nat[]v {x = x}
 nat {t = lam t} = cong lam {!!}
 nat {t = app t u} = cong₂ app (nat {t = t}) (nat {t = u})
--}
+nat {t = Π I f} = cong (Π I) (funExt (λ i → nat {t = f i}))
+nat {t = Σ I f} = cong (Σ I) (funExt (λ i → nat {t = f i}))
 
 nat[] : wkTm vz t [ γ ↑ A ] ≡ wkTm vz (t [ γ ])
 nat[] {t = var x} = nat[]v {x = x}
@@ -154,6 +174,8 @@ nat[] {B ⇒ C} {Γ} {A} {lam t} {Δ} {γ}
   wkTm (vs vz) t [ (γ ↑ A) ↑ B ] ≡⟨ {!!} ⟩
   wkTm (vs vz) (t [ γ ↑ B ])     ∎)
 nat[] {t = app t u} = cong₂ app (nat[] {t = t}) (nat[] {t = u})
+nat[] {t = Π I f} = cong (Π I) (funExt (λ i → nat[] {t = f i}))
+nat[] {t = Σ I f} = cong (Σ I) (funExt (λ i → nat[] {t = f i}))
 
 lem : wkTms vz γ ∘ (δ ↑ A) ≡ wkTms vz (γ ∘ δ)
 lem {γ = ε} = refl
@@ -171,12 +193,12 @@ lem {γ = γ , t} = cong₂ _,_ lem (nat[] {t = t})
   lam (t [ (γ ↑ _) ∘ (δ ↑ _) ])  ≡⟨ cong lam ([∘] {t = t}) ⟩  
   lam (t [ γ ↑ _ ] [ δ ↑ _ ])     ∎
 [∘] {t = app t u} = cong₂ app ([∘] {t = t}) ([∘] {t = u})
+[∘] {t = Π I f} = cong (Π I) (funExt λ i → [∘] {t = f i})
+[∘] {t = Σ I f} = cong (Σ I) (funExt λ i → [∘] {t = f i})
 
 lem1 : wkTms vz id ∘ (γ , t) ≡ γ
-lem1 {γ = γ} {t = t} = begin
-  wkTms vz id ∘ (γ , t) ≡⟨ {!!} ⟩
-  {!!} ≡⟨ {!!} ⟩  
-  γ ∎
+lem1 {Γ} {Δ} {ε} {A} {t} = refl
+lem1 {Γ} {Δ ▹ A} {γ , t} {B} {u} = {!!}
 
 idl : id ∘ γ ≡ γ
 idl {Γ} {Δ} {ε} = refl

@@ -1,29 +1,29 @@
 module Cont.HCont where
 
-open import Level renaming (zero to lzero; suc to lsuc)
+open import Level
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum
 open import Data.Product
 open import Function.Base
 
-{- Types & Contexts & Variables -}
+{- Kinds & Contexts & Variables -}
 
 infixr 20 _⇒_
-data Ty : Set where
-  * : Ty
-  _⇒_ : Ty → Ty → Ty
+data Kind : Set where
+  * : Kind
+  _⇒_ : Kind → Kind → Kind
 
-variable A B C : Ty
+variable A B C : Kind
 
 infixl 5 _▹_
 data Con : Set where
   •   : Con
-  _▹_ : Con → Ty → Con
+  _▹_ : Con → Kind → Con
 
 variable Γ Δ Θ : Con
 
-data Var : Con → Ty → Set where
+data Var : Con → Kind → Set where
   vz : Var (Γ ▹ A) A
   vs : Var Γ A → Var (Γ ▹ B) A
 
@@ -33,11 +33,11 @@ variable x y : Var Γ A
 
 infixr 4 _,_
 
-data Nf : Con → Ty → Set₁
+data Nf : Con → Kind → Set₁
 
-record Ne (Γ : Con) (B : Ty) : Set₁
+record Ne (Γ : Con) (B : Kind) : Set₁
 
-data Sp : Con → Ty → Ty → Set₁
+data Sp : Con → Kind → Kind → Set₁
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
@@ -61,7 +61,7 @@ data Sp where
   
 variable ts us ws : Sp Γ A B
 
-HCont : Ty → Set₁
+HCont : Kind → Set₁
 HCont = Nf •
 
 ap : Nf Γ (A ⇒ B) → Nf (Γ ▹ A) B
@@ -288,7 +288,8 @@ data SpHom where
   ε   : SpHom Γ ts ts
   _,_ : NfHom Γ t u → SpHom Γ ts us → SpHom Γ (t , ts) (u , us)
 
-HContHom = NfHom
+HContHom : HCont A → HCont A → Set₁
+HContHom = NfHom •
 
 idNfHom : NfHom Γ t t
 idNfHom {t = ne spr} = ne (id ◃ (λ x s → id) ◃ λ x s q → ε)
@@ -444,53 +445,53 @@ i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
   hh x (inj₂ s₂) q₂ = h₂ x s₂ q₂
 -}
 
-{-- Semantics --}
+{- Semantics -}
 
-{- Normal Form Functors -}
+{- One Interpreation -}
 
-⟦_⟧t : Ty → Set₁
-⟦ * ⟧t = Set
-⟦ A ⇒ B ⟧t = ⟦ A ⟧t → ⟦ B ⟧t
+⟦_⟧k : Kind → Set₁
+⟦ * ⟧k = Set
+⟦ A ⇒ B ⟧k = ⟦ A ⟧k → ⟦ B ⟧k
 
 ⟦_⟧c : Con → Set₁
-⟦ • ⟧c = Lift (lsuc lzero) ⊤
-⟦ Γ ▹ A ⟧c = ⟦ Γ ⟧c × ⟦ A ⟧t
+⟦ • ⟧c = Lift (suc zero) ⊤
+⟦ Γ ▹ A ⟧c = ⟦ Γ ⟧c × ⟦ A ⟧k
 
-⟦_⟧v : Var Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
+⟦_⟧v : Var Γ A → ⟦ Γ ⟧c → ⟦ A ⟧k
 ⟦ vz ⟧v (as , a) = a
 ⟦ vs x ⟧v (as , a) = ⟦ x ⟧v as
 
-⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
+⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧c → ⟦ A ⟧k
 
 ⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧c → Set
 
-⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧c → ⟦ A ⟧t → ⟦ B ⟧t
+⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧c → ⟦ A ⟧k → ⟦ B ⟧k
 
 ⟦ lam t ⟧nf as a = ⟦ t ⟧nf (as , a)
 ⟦ ne spr ⟧nf as = ⟦ spr ⟧ne as
 
 ⟦_⟧ne {Γ} (S ◃ P ◃ R) as =
-  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P x s)
+  Σ[ s ∈ S ] ({A : Kind} (x : Var Γ A) (p : P x s)
   → ⟦ R x s p ⟧sp as (⟦ x ⟧v as))
 
 ⟦ ε ⟧sp as a = a
 ⟦ t , ts ⟧sp as f = ⟦ ts ⟧sp as (f (⟦ t ⟧nf as))
 
-⟦_⟧ : HCont A → ⟦ A ⟧t
+⟦_⟧ : HCont A → ⟦ A ⟧k
 ⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
 
 {- Λ Terms -}
 
-data Tm : Con → Ty → Set₁ where
-  var : Var Γ A → Tm Γ A
-  lam : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
-  app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-  Πtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
-  Σtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
+data Ty : Con → Kind → Set₁ where
+  var : Var Γ A → Ty Γ A
+  lam : Ty (Γ ▹ A) B → Ty Γ (A ⇒ B)
+  app : Ty Γ (A ⇒ B) → Ty Γ A → Ty Γ B
+  Πtm : (I : Set) → (I → Ty Γ A) → Ty Γ A
+  Σtm : (I : Set) → (I → Ty Γ A) → Ty Γ A
 
 {- Normalization -}
 
-nf : Tm Γ A → Nf Γ A
+nf : Ty Γ A → Nf Γ A
 nf (var x) = nvar x
 nf (lam t) = lam (nf t)
 nf (app t u) = napp (nf t) (nf u)
@@ -499,9 +500,9 @@ nf (Σtm I f) = Σnf I (nf ∘ f)
 
 {- Embedding -}
 
-emb : Nf Γ A → Tm Γ A
+emb : Nf Γ A → Ty Γ A
 
-embSp : Sp Γ A B → Tm Γ A → Tm Γ B
+embSp : Sp Γ A B → Ty Γ A → Ty Γ B
 
 emb (lam t) = lam (emb t)
 emb {Γ} {A} (ne (S ◃ P ◃ R))
@@ -509,15 +510,3 @@ emb {Γ} {A} (ne (S ◃ P ◃ R))
 
 embSp ε u = u
 embSp (t , ts) u = embSp ts (app u (emb t))
-
-{- ... -}
-
-H' : ((Set → Set) → Set) → (Set → Set) → Set
-H' G F = F (G F)
-
-data H (G : (Set → Set) → Set) (F : Set → Set) : Set where
-  mkH : F (G F) → H G F
-
-HH : HCont (((* ⇒ *) ⇒ *) ⇒ (* ⇒ *) ⇒ *)
-HH = lam (lam (napp (nvar vz) (napp (nvar (vs vz)) (nvar vz))))
-

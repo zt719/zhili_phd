@@ -32,17 +32,39 @@ funExt₂ : {A : Set} {B : A → Set} {C : (x : A) → B x → Set}
   → f ≡ g
 funExt₂ h = funExt λ x → funExt λ y → h x y
 
-Eq→ᶜ : {S : Set} {P : S → Set} {T : Set} {Q : T → Set}
+Eq→ᶜ : {S T : Set} {P : S → Set} {Q : T → Set}
   → {g g' : S → T} {h : (s : S) → Q (g s) → P s} {h' : (s : S) → Q (g' s) → P s}
-  → (Σ[ eq ∈ g ≡ g' ] h ≡ λ s x → h' s (subst Q (funExt⁻ eq s) x))
+  → (Σ[ eq ∈ g ≡ g' ] (h ≡ λ s x → h' s (subst Q (funExt⁻ eq s) x)))
   → _≡_ {A = (S ◃ P) →ᶜ (T ◃ Q)} (g ◃ h) (g' ◃ h')
 Eq→ᶜ (refl , refl) = refl
 
-{- H as a signature of Functor of LList -}
+Eq→ᶜ' : {S T : Set} {P : S → Set} {Q : T → Set}
+  → {g g' : S → T} {h : (s : S) → Q (g s) → P s} {h' : (s : S) → Q (g' s) → P s}
+  → (eq : g ≡ g')
+  → (h ≡ λ s x → h' s (subst Q (funExt⁻ eq s) x))
+  → _≡_ {A = (S ◃ P) →ᶜ (T ◃ Q)} (g ◃ h) (g' ◃ h')
+Eq→ᶜ' refl refl = refl
+
+
+{- LList as a container -}
 
 data LList (X : Set) : Set where
   [] : LList X
   _∷_ : X → LList (LList X) → LList X
+
+{- ⟦ S ◃ P ⟧ X
+-- ≃ ⊤ ⊎ X × ⟦ S ◃ P ⟧ ⟦ S ◃ P ⟧ X
+-- ≃ (⊤ ◃ λ _ → ⊥) X ⊎ (⊤ ◃ λ _ ⊤) X × ⟦ S ◃ P ⟧ ⟦ S ◃ P ⟧ X
+-- 
+-- S ◃ P
+-- ≃ ⊤ᶜ ⊎ᶜ (⊤ ◃ λ _ → ⊤) ×ᶜ ((S ◃ P) ⊗ᶜ (S ◃ P))
+-- ≃ ⊤ᶜ ⊎ᶜ (⊤ ◃ λ _ → ⊤) ×ᶜ (Σ[ s ∈ S ] (P s → S) ◃ λ (s , f) → Σ[ p ∈ P s ] P (f p))
+-- ≃ ⊤ᶜ ⊎ᶜ Σ[ s ∈ S ] (P s → S) ◃ λ (s , f) → ⊤ ⊎ Σ[ p ∈ P s ] (⊤ ⊎ P (f p))
+-- ≃ (⊤ ⊎ Σ[ s ∈ S ] (P s → S))
+   ◃ case (λ{ tt → ⊥ }) (λ{ (s , f) → ⊤ ⊎ Σ[ p ∈ P s ] P (f p) })
+-}
+
+{- H as a signature of Functor of LList -}
 
 H : (Set → Set) → Set → Set
 H F X = ⊤ ⊎ X × F (F X)

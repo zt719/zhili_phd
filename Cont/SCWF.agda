@@ -4,22 +4,14 @@ module Cont.SCWF where
 
 open import Data.Empty
 open import Data.Unit
-open import Data.Sum
+open import Data.Sum hiding ([_,_])
 open import Data.Product
-open import Function.Base
-
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.PropositionalEquality hiding ([_])
 
 postulate
   funExt : {ℓ ℓ' : _} {A : Set ℓ} {B : A → Set ℓ'} {f g : (x : A) → B x}
     → ((x : A) → f x ≡ g x)
     → f ≡ g
-
-funExt₂ : {ℓ ℓ' ℓ'' : _} {A : Set ℓ} {B : A → Set ℓ'} {C : (x : A) → B x → Set ℓ''}
-  {f g : (x : A) (y : B x) → C x y}
-  → ((x : A) (y : B x) → f x y ≡ g x y)
-  → f ≡ g
-funExt₂ h = funExt (funExt ∘ h)
 
 funExt⁻ : {A : Set} {B : A → Set} {f g : (x : A) → B x}
   → f ≡ g
@@ -256,17 +248,17 @@ _⊎nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S′ ◃ P′ �
   R x f (i , p) = en (ts i) .Ne.R x (f i) p
 
 Σnf : (I : Set) → (I → Nf Γ A) → Nf Γ A
-Σnf {Γ} {A ⇒ B} I ts = lam (Σnf I (λ i → ap (ts i)))
-Σnf {Γ} {*} I ts = ne (S ◃ P ◃ R)
+Σnf {Γ} {A ⇒ B} I f = lam (Σnf I (λ i → ap (f i)))
+Σnf {Γ} {*} I f = ne (S ◃ P ◃ R)
   where
   S : Set
-  S = Σ[ i ∈ I ] en (ts i) .Ne.S
+  S = Σ[ i ∈ I ] en (f i) .Ne.S
 
   P : Var Γ A → S → Set
-  P x (i , s) = en (ts i) .Ne.P x s
+  P x (i , s) = en (f i) .Ne.P x s
 
   R : (x : Var Γ A) (s : S) → P x s → Sp Γ A *
-  R x (i , s) p = en (ts i) .Ne.R x s p
+  R x (i , s) p = en (f i) .Ne.R x s p
 
 infix 2 Σnf-syntax
 Σnf-syntax : (I : Set) → (I → Nf Γ A) → Nf Γ A
@@ -295,43 +287,37 @@ subv : Var Γ A → Nfs Δ Γ → Nf Δ A
 subv vz (γ , t) = t
 subv (vs x) (γ , t) = subv x γ
 
-_[_]nf : Nf Γ A → Nfs Δ Γ → Nf Δ A
+_[_] : Nf Γ A → Nfs Δ Γ → Nf Δ A
 
 _[_]sp : Sp Γ A B → Nfs Δ Γ → Sp Δ A B
 
-lam t [ γ ]nf = lam (t [ γ ↑ ]nf)
-ne {Γ} (S ◃ P ◃ R) [ γ ]nf = Σnf[ s ∈ S ]
+lam t [ γ ] = lam (t [ γ ↑ ])
+ne {Γ} (S ◃ P ◃ R) [ γ ] = Σnf S (λ s →
+  Πnf Ty (λ A → Πnf (Var Γ A) (λ x → Πnf (P x s) (λ p →
+  subv x γ ◇ (R x s p [ γ ]sp)
+  ))))
+
+{-
+Σnf[ s ∈ S ]
   Πnf[ A ∈ Ty ] Πnf[ x ∈ Var Γ A ] Πnf[ p ∈ P x s ]
   (subv x γ) ◇ (R x s p [ γ ]sp)
-
+-}
 ε [ γ ]sp = ε
-(t , ts) [ γ ]sp = (t [ γ ]nf) , (ts [ γ ]sp)
+(t , ts) [ γ ]sp = t [ γ ] , ts [ γ ]sp
 
-idNfs : Nfs Γ Γ
-idNfs {∙} = ε
-idNfs {Γ ▹ A} = idNfs ↑
+id : Nfs Γ Γ
+id {∙} = ε
+id {Γ ▹ A} = id ↑
 
-_∘nfs_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
-ε ∘nfs γ = ε
-(δ , t) ∘nfs γ = (δ ∘nfs γ) , (t [ γ ]nf)
+_∘_ : Nfs Δ Γ → Nfs Θ Δ → Nfs Θ Γ
+ε ∘ γ = ε
+(δ , t) ∘ γ = (δ ∘ γ) , t [ γ ]
 
 π₁ : Nfs Δ (Γ ▹ A) → Nfs Δ Γ
 π₁ (γ , t) = γ
 
 π₂ : Nfs Δ (Γ ▹ A) → Nf Δ A
 π₂ (γ , t) = t
-
-wk : Nfs (Γ ▹ A) Γ
-wk = π₁ idNfs
-
-nvz : Nf (Γ ▹ A) A
-nvz = π₂ idNfs
-
-nvs : Nf Γ A → Nf (Γ ▹ B) A
-nvs t = t [ wk ]nf
-
-<_> : Nf Γ A → Nfs Γ (Γ ▹ A)
-< t > = idNfs , t
 
 π₁β : π₁ (γ , t) ≡ γ
 π₁β = refl
@@ -342,52 +328,59 @@ nvs t = t [ wk ]nf
 πη : (π₁ γ , π₂ γ) ≡ γ
 πη {γ = γ , t} = refl
 
-,∘ : (γ , t) ∘nfs δ ≡ (γ ∘nfs δ , t [ δ ]nf)
+,∘ : (γ , t) ∘ δ ≡ (γ ∘ δ , t [ δ ])
 ,∘ = refl
 
-lem1 : (nvar vz [ γ , t ]nf) ≡ t
-lem1 {Γ} {Δ} {γ} {A} {t} = {!!}
+{- Not easy part -}
 
-lem2 : (wkNfs vz idNfs ∘nfs (γ , t)) ≡ γ
-lem2 = {!!}
-
-idl : {Γ Δ : Con} {γ : Nfs Δ Γ} → idNfs ∘nfs γ ≡ γ
-idl {Γ} {Δ} {ε} = refl
-idl {Γ} {Δ} {γ , t} = cong₂ _,_ lem2 lem1
-
-transport : ∀ {A B : Set} → A ≡ B → A → B
-transport {A} {B} p x = subst (λ X → X) p x
-
-ne≡ : {B : Ty} {S T : Set} {P : {A : Ty} (x : Var Γ A) (s : S) → Set}
+ne≡ : {Γ : Con} {B : Ty}
+  {S T : Set} (eq-shape : S ≡ T)
+  {P : {A : Ty} (x : Var Γ A) (s : S) → Set}
   {Q : {A : Ty} (x : Var Γ A) (t : T) → Set}
+  (eq-pos : _≡_ {A = {A : Ty} (x : Var Γ A) (s : S) → Set} P
+    (λ {A} x s → Q {A} x (subst (λ S → S) eq-shape s)))
   {R : {A : Ty} (x : Var Γ A) (s : S) (p : P x s) → Sp Γ A B}
   {L : {A : Ty} (x : Var Γ A) (t : T) (q : Q x t) → Sp Γ A B}
-  → (eqS : S ≡ T)
-  → (eqP : {A : Ty} (x : Var Γ A) (s : S) → P x s ≡ Q x (transport eqS s))
-  → (eqR : {A : Ty} (x : Var Γ A) (s : S) (p : P x s)
-    → R x s p ≡ L x (transport eqS s) (transport (eqP x s) p))
+  (eq-rec : _≡_ {A = {A : Ty} (x : Var Γ A) (s : S) (p : P x s) → Sp Γ A B} R
+    λ {A} x s p → L {A} x (subst (λ S → S) eq-shape s)
+      (subst₂ (λ S P → P x s) eq-shape eq-pos p))
   → _≡_ {A = Ne Γ B} (S ◃ P ◃ R) (T ◃ Q ◃ L)
-ne≡ refl eqP eqR = {!!}
+ne≡ refl refl refl = refl
 
-[id] : {Γ : Con} {A : Ty} {t : Nf Γ A} → t [ idNfs ]nf ≡ t
+[id] : {Γ : Con} {A : Ty} {t : Nf Γ A} → t [ id ] ≡ t
 [id] {Γ} {A ⇒ B} {lam t} = cong lam [id]
 [id] {Γ} {*} {ne (S ◃ P ◃ R)} = cong ne (ne≡ {!!} {!!} {!!})
 
-[∘] : {Γ Δ Θ : Con} {A : Ty} {t : Nf Γ A} {γ : Nfs Δ Γ} {δ : Nfs Θ Δ}
-  → t [ γ ∘nfs δ ]nf ≡ ((t [ γ ]nf) [ δ ]nf)
-[∘] = {!!}
+↑∘ : {Γ Δ Θ : Con} {γ : Nfs Δ Γ} {δ : Nfs Θ Δ} {A : Ty}
+  → _↑ {A = A} (γ ∘ δ) ≡ (γ ↑) ∘ (δ ↑)
+↑∘ {∙} {Δ} {Θ} {ε} {δ} {A} = cong₂ _,_ refl {!!}
+↑∘ {Γ ▹ A} {Δ} {Θ} {γ , t} {δ} {B} = cong₂ _,_ (cong₂ _,_ {!!} {!!}) {!!}
 
-idr : {Γ Δ : Con} {γ : Nfs Δ Γ} → γ ∘nfs idNfs ≡ γ
+[∘] : {Γ Δ Θ : Con} {A : Ty} {t : Nf Γ A} {γ : Nfs Δ Γ} {δ : Nfs Θ Δ}
+  → t [ γ ∘ δ ] ≡ (t [ γ ]) [ δ ]
+[∘] {Γ} {Δ} {Θ} {A} {lam t} {γ} {δ} = cong lam (trans (cong (t [_]) ↑∘) ([∘] {t = t}))
+[∘] {Γ} {Δ} {Θ} {A} {ne x} {γ} {δ} = cong ne {!!}
+
+nvz[] : (nvar vz) [ γ , t ] ≡ t
+nvz[] {Γ} {Δ} {γ} {*} {ne e} = cong ne {!!}
+nvz[] {Γ} {Δ} {γ} {A ⇒ B} {lam t} = cong lam {!!}
+
+lem2 : (wkNfs vz id ∘ (γ , t)) ≡ γ
+lem2 {Γ} {∙} {ε} {A} {t} = refl
+lem2 {Γ} {Δ ▹ A} {γ , t} {B} {u} = cong₂ _,_ {!!} {!!}
+
+idl : {Γ Δ : Con} {γ : Nfs Δ Γ} → id ∘ γ ≡ γ
+idl {Γ} {Δ} {ε} = refl
+idl {Γ} {Δ} {γ , t} = cong₂ _,_ lem2 nvz[]
+
+idr : {Γ Δ : Con} {γ : Nfs Δ Γ} → γ ∘ id ≡ γ
 idr {Γ} {Δ} {ε} = refl
 idr {Γ} {Δ} {γ , t} = cong₂ _,_ idr [id]
 
 ass : {Γ Δ Θ Ξ : Con} {γ : Nfs Δ Γ} {δ : Nfs Θ Δ} {θ : Nfs Ξ Θ}
-   → (γ ∘nfs δ) ∘nfs θ ≡ γ ∘nfs (δ ∘nfs θ)
+   → (γ ∘ δ) ∘ θ ≡ γ ∘ (δ ∘ θ)
 ass {Γ} {Δ} {Θ} {Ξ} {ε} {δ} {θ} = refl
 ass {Γ ▹ A} {Δ} {Θ} {Ξ} {γ , t} {δ} {θ} = cong₂ _,_ ass (sym ([∘] {t = t} {γ = δ} {δ = θ}))
-
-εNfs : {Γ : Con} → Nfs Γ ∙
-εNfs {Γ} = ε
 
 ∙-η : {Γ : Con}{γ : Nfs Γ ∙} → γ ≡ ε
 ∙-η {Γ} {ε} = refl

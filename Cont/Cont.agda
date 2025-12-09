@@ -31,7 +31,7 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
   open Cont SP
   field
     s : S
-    f : P s → X
+    f : (p : P s) → X
 
 ⟦_⟧₁ : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
 ⟦ SP ⟧₁ g sk = sk .s , g ∘ sk .f
@@ -56,7 +56,6 @@ record _→ᶜ_ (SP TQ : Cont) : Set where
 
 idᶜ : SP →ᶜ SP
 idᶜ = id ◃ λ s → id
-
 
 _∘ᶜ_ : TQ →ᶜ UV → SP →ᶜ TQ → SP →ᶜ UV
 (g ◃ h) ∘ᶜ (g' ◃ h') = (g ∘ g') ◃ λ s → h' s ∘ h (g' s)
@@ -83,13 +82,13 @@ _⊎ᶜ₁_ : SP →ᶜ TQ → SP' →ᶜ TQ' → SP ⊎ᶜ SP' →ᶜ TQ ⊎ᶜ
   = (λ{ (inj₁ s) → inj₁ (g s) ; (inj₂ s') → inj₂ (g' s') })
   ◃ λ{ (inj₁ s) p → h s p ; (inj₂ s') p' → h' s' p' }
 
-Πᶜ : (I : Set) → (I → Cont) → Cont
-Πᶜ I Cs = ((i : I) → let S ◃ P = Cs i in S)
-  ◃ λ f → Σ[ i ∈ I ] let S ◃ P = Cs i in P (f i)
+Πᶜ : (I : Set) (f : I → Cont) → Cont
+Πᶜ I fs = ((i : I) → let S ◃ P = fs i in S)
+  ◃ λ f → Σ[ i ∈ I ] let S ◃ P = fs i in P (f i)
 
 infix 2 Πᶜ-syntax
 
-Πᶜ-syntax : (I : Set) → (I → Cont) → Cont
+Πᶜ-syntax : (I : Set) (f : I → Cont) → Cont
 Πᶜ-syntax = Πᶜ
 
 syntax Πᶜ-syntax A (λ x → B) = Πᶜ[ x ∈ A ] B
@@ -99,9 +98,9 @@ syntax Πᶜ-syntax A (λ x → B) = Πᶜ[ x ∈ A ] B
 Πᶜ₁ I f = (λ s i → let g ◃ h = f i in g (s i))
   ◃ λ s (i , p) → i , let g ◃ h = f i in h (s i) p
 
-Σᶜ : (I : Set) → (I → Cont) → Cont
-Σᶜ I SPs = (Σ[ i ∈ I ] let S ◃ P = SPs i in S)
-  ◃ λ (i , s) → let S ◃ P = SPs i in P s
+Σᶜ : (I : Set) (f : I → Cont) → Cont
+Σᶜ I fs = (Σ[ i ∈ I ] let S ◃ P = fs i in S)
+  ◃ λ (i , s) → let S ◃ P = fs i in P s
 
 infix 2 Σᶜ-syntax
 
