@@ -7,7 +7,6 @@ open import Data.Unit
 open import Data.Sum
 open import Data.Product
 open import Function.Base
-open import Relation.Binary.PropositionalEquality hiding ([_])
 
 {- Containers -}
 

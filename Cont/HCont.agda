@@ -7,23 +7,23 @@ open import Data.Sum
 open import Data.Product
 open import Function.Base
 
-{- Kinds & Contexts & Variables -}
+{- Tys & Contexts & Variables -}
 
 infixr 20 _⇒_
-data Kind : Set where
-  * : Kind
-  _⇒_ : Kind → Kind → Kind
+data Ty : Set where
+  * : Ty
+  _⇒_ : Ty → Ty → Ty
 
-variable A B C : Kind
+variable A B C : Ty
 
 infixl 5 _▹_
 data Con : Set where
   •   : Con
-  _▹_ : Con → Kind → Con
+  _▹_ : Con → Ty → Con
 
 variable Γ Δ Θ : Con
 
-data Var : Con → Kind → Set where
+data Var : Con → Ty → Set where
   vz : Var (Γ ▹ A) A
   vs : Var Γ A → Var (Γ ▹ B) A
 
@@ -33,11 +33,11 @@ variable x y : Var Γ A
 
 infixr 4 _,_
 
-data Nf : Con → Kind → Set₁
+data Nf : Con → Ty → Set₁
 
-record Ne (Γ : Con) (B : Kind) : Set₁
+record Ne (Γ : Con) (B : Ty) : Set₁
 
-data Sp : Con → Kind → Kind → Set₁
+data Sp : Con → Ty → Ty → Set₁
 
 data Nf where
   lam : Nf (Γ ▹ A) B → Nf Γ (A ⇒ B)
@@ -61,7 +61,7 @@ data Sp where
   
 variable ts us ws : Sp Γ A B
 
-HCont : Kind → Set₁
+HCont : Ty → Set₁
 HCont = Nf •
 
 ap : Nf Γ (A ⇒ B) → Nf (Γ ▹ A) B
@@ -449,7 +449,7 @@ i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
 
 {- One Interpreation -}
 
-⟦_⟧k : Kind → Set₁
+⟦_⟧k : Ty → Set₁
 ⟦ * ⟧k = Set
 ⟦ A ⇒ B ⟧k = ⟦ A ⟧k → ⟦ B ⟧k
 
@@ -471,7 +471,7 @@ i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
 ⟦ ne spr ⟧nf as = ⟦ spr ⟧ne as
 
 ⟦_⟧ne {Γ} (S ◃ P ◃ R) as =
-  Σ[ s ∈ S ] ({A : Kind} (x : Var Γ A) (p : P x s)
+  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P x s)
   → ⟦ R x s p ⟧sp as (⟦ x ⟧v as))
 
 ⟦ ε ⟧sp as a = a
@@ -482,16 +482,16 @@ i₁nf {Γ} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (f ◃ g ◃ h)
 
 {- Λ Terms -}
 
-data Ty : Con → Kind → Set₁ where
-  var : Var Γ A → Ty Γ A
-  lam : Ty (Γ ▹ A) B → Ty Γ (A ⇒ B)
-  app : Ty Γ (A ⇒ B) → Ty Γ A → Ty Γ B
-  Πtm : (I : Set) → (I → Ty Γ A) → Ty Γ A
-  Σtm : (I : Set) → (I → Ty Γ A) → Ty Γ A
+data Tm : Con → Ty → Set₁ where
+  var : Var Γ A → Tm Γ A
+  lam : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
+  app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
+  Πtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
+  Σtm : (I : Set) → (I → Tm Γ A) → Tm Γ A
 
 {- Normalization -}
 
-nf : Ty Γ A → Nf Γ A
+nf : Tm Γ A → Nf Γ A
 nf (var x) = nvar x
 nf (lam t) = lam (nf t)
 nf (app t u) = napp (nf t) (nf u)
@@ -500,9 +500,9 @@ nf (Σtm I f) = Σnf I (nf ∘ f)
 
 {- Embedding -}
 
-emb : Nf Γ A → Ty Γ A
+emb : Nf Γ A → Tm Γ A
 
-embSp : Sp Γ A B → Ty Γ A → Ty Γ B
+embSp : Sp Γ A B → Tm Γ A → Tm Γ B
 
 emb (lam t) = lam (emb t)
 emb {Γ} {A} (ne (S ◃ P ◃ R))
@@ -510,3 +510,16 @@ emb {Γ} {A} (ne (S ◃ P ◃ R))
 
 embSp ε u = u
 embSp (t , ts) u = embSp ts (app u (emb t))
+
+{- Higher W -}
+
+HW : HCont (A ⇒ A) → HCont A
+HW (lam x) = napp {!!} {!!}
+
+-- H G F = F (G F)
+Hᶜ : HCont (((* ⇒ *) ⇒ *) ⇒ (* ⇒ *) ⇒ *)
+Hᶜ = lam (lam (napp (nvar vz) (napp (nvar (vs vz)) (nvar vz))))
+
+H : ((Set → Set) → Set) → (Set → Set) → Set
+H = ⟦ Hᶜ ⟧
+

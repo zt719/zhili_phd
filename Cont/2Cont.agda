@@ -32,9 +32,6 @@ record 2⟦_⟧ (SPPR : 2Cont) (F : Cont) (X : Set) : Set where
     kx : PX s → X
     kf : (pf : PF s) → ⟦ F ⟧ (2⟦ RF s pf ⟧ F X)
 
-2⟦_⟧' : 2Cont → (Set → Set) → Set → Set
-2⟦ S ◃ PX + PF + RF ⟧' F X = Σ[ s ∈ S ] ((PX s → X) × ((pf : PF s) → F (2⟦ RF s pf ⟧' F X)))
-
 app' : 2Cont → Cont → Cont
 app' (S ◃ PX + PF + RF) TQ
   = Σᶜ[ s ∈ S ] ((⊤ ◃ λ _ → PX s) ×ᶜ (Πᶜ[ pf ∈ PF s ] (TQ ⊗ᶜ app' (RF s pf) TQ)))
@@ -56,19 +53,13 @@ app' (S ◃ PX + PF + RF) TQ
 appS : 2Cont → Cont → Set
 appS (S ◃ PX + PF + RF) (T ◃ Q) = Σ[ s ∈ S ] ((pf : PF s) → Σ[ t ∈ T ] (Q t → appS (RF s pf) (T ◃ Q)))
 
-{-
-appS : 2Cont → Cont → Set
-appS H (T ◃ Q) = Σ[ s ∈ H .S ] ((pf : H .PF s) → Σ[ t ∈ T ] (Q t → appS (H .RF s pf) (T ◃ Q)))
-  where open 2Cont
-{-# INLINE appS #-}
--}
-
 appP : (H : 2Cont) (F : Cont) → appS H F → Set
 appP (S ◃ PX + PF + RF) (T ◃ Q) (s , f) = Σ[ pf ∈ PF s ] let (t , g) = f pf in Σ[ q ∈ Q t ] (appP (RF s pf) (T ◃ Q) (g q) ⊎ PX s) 
 
 app : 2Cont → Cont → Cont
 app H F = appS H F ◃ appP H F
 
+{-
 appS₁ : (SPPR : 2Cont) → TQ →ᶜ UV → appS SPPR TQ → appS SPPR UV
 appS₁ (S ◃ PX + PF + RF) (g ◃ h) (s , f)
   = s , λ pf → let (t , f') = f pf in
@@ -82,8 +73,8 @@ appP₁ (S ◃ PX + PF + RF) (g ◃ h) (s , f) (pf , (u , inj₂ px))
 
 app₁ : (H : 2Cont) → SP →ᶜ TQ → app H SP →ᶜ app H TQ
 app₁ H gh = appS₁ H gh ◃ appP₁ H gh
+-}
 
-{-
 {-# NO_POSITIVITY_CHECK #-}
 data 2WS (H : 2Cont) : Set
 
@@ -93,19 +84,16 @@ data 2WS (H : 2Cont) : Set
 data 2WS H where
   2supS : appS H (2WS H ◃ 2WP H) → 2WS H
 
-2WP H (2supS s) = appP H (2WS H ◃ 2WP H) {!!}
+2WP H (2supS s) = appP H (2WS H ◃ 2WP H) s
 
-2supP : {H : 2Cont} (s : appS H (2WS H ◃ 2WP H)) → 2WP H (2supS s) → appP H (2WS H ◃ 2WP H) {!!}
+2supP : (s : appS H (2WS H ◃ 2WP H)) → 2WP H (2supS s) → appP H (2WS H ◃ 2WP H) s
 2supP s p = p
--}
 
-{-
 2W : 2Cont → Cont
 2W H = 2WS H ◃ 2WP H
 
 2sup : {H : 2Cont} → app H (2W H) →ᶜ 2W H
-2sup {H} = 2supS ◃ 2supP {H}
--}
+2sup {H} = 2supS ◃ 2supP
 
 --        app₁ H fold2W  
 --  app H (2W H)  →  app H TQ  
@@ -115,20 +103,6 @@ data 2WS H where
 --     2W H       →   TQ
 --           fold2W
 
-{-
--- data W (SP : Cont) : Set where
---   sup : ⟦ SP ⟧ (W SP) → W SP
---
--}
-
-
-{-
-appS : 2Cont → Cont → Set
-appS (S ◃ PX + PF + RF) (T ◃ Q) = Σ[ s ∈ S ] ((pf : PF s) → Σ[ t ∈ T ] (Q t → (appS (RF s pf) (T ◃ Q))))
--}
-
-
-{-
 ⊤²ᶜ : 2Cont
 ⊤²ᶜ = ⊤ ◃ (λ _ → ⊥) + (λ _ → ⊥) + λ _ ()
 
@@ -173,4 +147,9 @@ record _→²ᶜ_ (SPPR TQQL : 2Cont) : Set₁ where
   h' : (α : H →²ᶜ J) (UV : Cont) (s' : appS H UV) → appP J UV (g' α UV s') → appP H UV s'
   h' {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (g + hx + hf + kf) UV (s , f) (qf , v , inj₁ idk) = let (u , f') = f (hf s qf) in hf s qf , v , inj₁ (h' (kf s qf) UV (f' v) idk)
   h' {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (g + hx + hf + kf) UV (s , f) (qf , v , inj₂ qx) = hf s qf , v , inj₂ (hx s qx)
--}
+
+eqᶜ : {S T : Set} (eq : S ≡ T)
+  → {P : S → Set} {Q : T → Set}
+  → P ≡ (λ s → Q (subst (λ S → S) eq s))
+  → _≡_ {A = Cont} (S ◃ P) (T ◃ Q)
+eqᶜ refl refl = refl
