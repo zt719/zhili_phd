@@ -511,15 +511,10 @@ emb {Γ} {A} (ne (S ◃ P ◃ R))
 embSp ε u = u
 embSp (t , ts) u = embSp ts (app u (emb t))
 
-{- Higher W -}
+⟦_⟧Ty : Ty → Set₁
+⟦ * ⟧Ty = Set
+⟦ A ⇒ B ⟧Ty = HCont A → HCont B
 
-HW : HCont (A ⇒ A) → HCont A
-HW (lam x) = napp {!!} {!!}
-
--- H G F = F (G F)
-Hᶜ : HCont (((* ⇒ *) ⇒ *) ⇒ (* ⇒ *) ⇒ *)
-Hᶜ = lam (lam (napp (nvar vz) (napp (nvar (vs vz)) (nvar vz))))
-
-H : ((Set → Set) → Set) → (Set → Set) → Set
-H = ⟦ Hᶜ ⟧
-
+⟦_⟧HCont : {A : Ty} → HCont A → ⟦ A ⟧Ty
+⟦_⟧HCont {*} (ne (S ◃ P ◃ R)) = S
+⟦_⟧HCont {A ⇒ B} h f = napp h f

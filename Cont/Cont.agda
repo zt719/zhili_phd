@@ -33,7 +33,7 @@ record ⟦_⟧ (SP : Cont) (X : Set) : Set where
     f : (p : P s) → X
 
 ⟦_⟧₁ : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
-⟦ SP ⟧₁ g sk = sk .s , g ∘ sk .f
+⟦ SP ⟧₁ g sf = sf .s , g ∘ sf .f
   where open ⟦_⟧
 {-# INLINE ⟦_⟧₁ #-}
 
@@ -245,3 +245,7 @@ open import Data.Fin
   ⨂ᶜP {zero} f tt = ⊤
   ⨂ᶜP {suc n} f (s , g) with f zero
   ... | S ◃ P = Σ[ p ∈ P s ] ⨂ᶜP {n} (f ∘ suc) (g p)
+
+{- Equality -}
+
+open import Relation.Binary.PropositionalEquality

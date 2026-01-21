@@ -297,11 +297,6 @@ ne {Γ} (S ◃ P ◃ R) [ γ ] = Σnf S (λ s →
   subv x γ ◇ (R x s p [ γ ]sp)
   ))))
 
-{-
-Σnf[ s ∈ S ]
-  Πnf[ A ∈ Ty ] Πnf[ x ∈ Var Γ A ] Πnf[ p ∈ P x s ]
-  (subv x γ) ◇ (R x s p [ γ ]sp)
--}
 ε [ γ ]sp = ε
 (t , ts) [ γ ]sp = t [ γ ] , ts [ γ ]sp
 
