@@ -1,10 +1,10 @@
-module Cont.HCont where
+module Cont.HContFunny where
 
 open import Level
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum
-open import Data.Product hiding (Σ)
+open import Data.Product
 open import Function.Base
 
 {- Tys & Contexts & Variables -}
@@ -176,87 +176,8 @@ ne {Γ} (S ◃ P ◃ R) [ x := u ] = ne (S ◃ P′ ◃ R′)
 ε < x := u > = ε
 (t , ts) < x := u > = (t [ x := u ]) , (ts < x := u >)
 
-napp : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
-napp (lam t) u = t [ vz := u ]
-
-_◇_ : Nf Γ A → Sp Γ A B → Nf Γ B
-t ◇ ε = t
-t ◇ (u , us) = napp t u ◇ us
-
-{- Algebraic Structures -}
-
-⊤nf : Nf Γ A
-⊤nf {Γ} {*} = ne (⊤ ◃ (λ{ x tt → ⊥ }) ◃ λ{ x tt () })
-⊤nf {Γ} {A ⇒ B} = lam ⊤nf
-
-⊥nf : Nf Γ A
-⊥nf {Γ} {*} = ne (⊥ ◃ (λ x ()) ◃ (λ x ()))
-⊥nf {Γ} {A ⇒ B} = lam ⊥nf
-
-_×nf_ : Nf Γ A → Nf Γ A → Nf Γ A
-lam t ×nf lam u = lam (t ×nf u)
-_×nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S′ ◃ P′ ◃ R′)
-  where
-  S′ : Set
-  S′ = S × T
-
-  P′ : Var Γ A → S′ → Set
-  P′ x (s , t) = P x s ⊎ Q x t
-
-  R′ : (x : Var Γ A) (s : S′) → P′ x s → Sp Γ A B
-  R′ x (s , t) (inj₁ p) = R x s p
-  R′ x (s , t) (inj₂ q) = L x t q
-
-_⊎nf_ : Nf Γ A → Nf Γ A → Nf Γ A
-lam t ⊎nf lam u = lam (t ⊎nf u)
-_⊎nf_ {Γ} {B} (ne (S ◃ P ◃ R)) (ne (T ◃ Q ◃ L)) = ne (S′ ◃ P′ ◃ R′)
-  where
-  S′ : Set
-  S′ = S ⊎ T
-
-  P′ : Var Γ A → S′ → Set
-  P′ x (inj₁ s) = P x s
-  P′ x (inj₂ t) = Q x t
-
-  R′ : (x : Var Γ A) (s : S′) → P′ x s → Sp Γ A B
-  R′ x (inj₁ s) p = R x s p
-  R′ x (inj₂ t) q = L x t q
-
-Πnf : (I : Set) → (I → Nf Γ A) → Nf Γ A
-Πnf {Γ} {A ⇒ B} I ts = lam (Πnf I (λ i → ap (ts i)))
-Πnf {Γ} {*} I ts = ne (S ◃ P ◃ R)
-  where
-  S : Set
-  S = (i : I) → en (ts i) .Ne.S
-
-  P : Var Γ A → S → Set
-  P x f = Σ[ i ∈ I ] en (ts i) .Ne.P x (f i)
-
-  R : (x : Var Γ A) (s : S) → P x s → Sp Γ A *
-  R x f (i , p) = en (ts i) .Ne.R x (f i) p
-
-Σnf : (I : Set) → (I → Nf Γ A) → Nf Γ A
-Σnf {Γ} {A ⇒ B} I ts = lam (Σnf I (λ i → ap (ts i)))
-Σnf {Γ} {*} I ts = ne (S ◃ P ◃ R)
-  where
-  S : Set
-  S = Σ[ i ∈ I ] en (ts i) .Ne.S
-
-  P : Var Γ A → S → Set
-  P x (i , s) = en (ts i) .Ne.P x s
-
-  R : (x : Var Γ A) (s : S) → P x s → Sp Γ A *
-  R x (i , s) p = en (ts i) .Ne.R x s p
-
-infix 2 Σnf-syntax
-Σnf-syntax : (I : Set) → (I → Nf Γ A) → Nf Γ A
-Σnf-syntax = Πnf
-syntax Σnf-syntax A (λ x → B) = Σnf[ x ∈ A ] B
-
-infix 2 Πnf-syntax
-Πnf-syntax : (I : Set) → (I → Nf Γ A) → Nf Γ A
-Πnf-syntax = Πnf
-syntax Πnf-syntax A (λ x → B) = Πnf[ x ∈ A ] B
+⟦_⟧ : Nf Γ (A ⇒ B) → Nf Γ A → Nf Γ B
+⟦ lam t ⟧ u = t [ vz := u ]
 
 {- Morphisms -}
 
@@ -289,17 +210,17 @@ HContHom : HCont A → HCont A → Set₁
 HContHom = NfHom •
 
 idNfHom : NfHom Γ t t
-idNfHom {t = ne spr} = ne (id ◃ (λ x s → id) ◃ λ x s q → ε)
+idNfHom {t = ne spr} = ne (id ◃ (λ x s → id) ◃ (λ x s q → ε))
 idNfHom {t = lam t} = lam (idNfHom {t = t})
 
 _∘nfHom_ : NfHom Γ u w → NfHom Γ t u → NfHom Γ t w
 _∘spHom_ : SpHom Γ us ws → SpHom Γ ts us → SpHom Γ ts ws
 
 lam f ∘nfHom lam g = lam (f ∘nfHom g)
-ne (f ◃ g ◃ h) ∘nfHom ne (f′ ◃ g′ ◃ h′) = ne (
-  (f ∘ f′)
-  ◃ (λ x s → g′ x s ∘ g x (f′ s))
-  ◃ λ x s q → (h x (f′ s) q) ∘spHom h′ x s (g x (f′ s) q)
+ne (fS ◃ fP ◃ fR) ∘nfHom ne (gS ◃ gP ◃ gR) = ne (
+  (fS ∘ gS)
+  ◃ (λ x s → gP x s ∘ fP x (gS s))
+  ◃ λ x s q → (fR x (gS s) q) ∘spHom gR x s (fP x (gS s) q)
   )
 
 ε ∘spHom ε = ε
@@ -346,87 +267,61 @@ _<_:=_>₁ : (ts : Sp Γ B C) (x : Var Γ A) {u w : Nf (Γ - x) A}
 ε < x := u→w >₁ = ε
 (t , ts) < x := u→w >₁ = (t [ x := u→w ]₁) , (ts < x := u→w >₁)
 
-napp₁ : (t : Nf Γ (A ⇒ B)) → NfHom Γ u w → NfHom Γ (napp t u) (napp t w)
-napp₁ (lam t) u→w = t [ vz := u→w ]₁
+⟦_⟧₁ : (t : Nf Γ (A ⇒ B)) → NfHom Γ u w → NfHom Γ (⟦ t ⟧ u) (⟦ t ⟧ w)
+⟦ lam t ⟧₁ u→w = t [ vz := u→w ]₁
+
+{-
+open import Relation.Binary.PropositionalEquality
+
+nf-id : (t : Nf (Γ ▹ A) B) → t [ vz := idNfHom {t = u} ]₁ ≡ idNfHom
+nf-id {Γ} {A} {B ⇒ C} {u} (lam t) = cong lam {!!}
+nf-id {Γ} {A} {B} {u} (ne x) = {!!}
+
+napp-id : (t : Nf Γ (A ⇒ B)) → napp₁ t (idNfHom {t = u}) ≡ idNfHom
+napp-id {Γ} {A} {B} {u} (lam t) = nf-id t
+-}
 
 {- Semantics -}
 
-{- One Interpreation -}
+record Cat : Set₂ where
+  field
+    Obj : Set₁
+    Hom : Obj → Obj → Set₁
+    ID : ∀ {X} → Hom X X
+    COMP : ∀ {X Y Z} → Hom Y Z → Hom X Y → Hom X Z
 
-⟦_⟧t : Ty → Set₁
-⟦ * ⟧t = Set
-⟦ A ⇒ B ⟧t = ⟦ A ⟧t → ⟦ B ⟧t
+record Func (ℂ 𝔻 : Cat) : Set₁ where
+  open Cat
+  field
+    F : ℂ .Obj → 𝔻 .Obj
+    F₁ : ∀ {X Y} → ℂ .Hom X Y → 𝔻 .Hom (F X) (F Y)
 
-⟦_⟧c : Con → Set₁
-⟦ • ⟧c = Lift (suc zero) ⊤
-⟦ Γ ▹ A ⟧c = ⟦ Γ ⟧c × ⟦ A ⟧t
+HCONT : (A : Ty) → Cat
+HCONT A = record
+  { Obj = HCont A
+  ; Hom = HContHom
+  ; ID = idNfHom
+  ; COMP = _∘nfHom_
+  }
 
-⟦_⟧v : Var Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
-⟦ vz ⟧v (as , a) = a
-⟦ vs x ⟧v (as , a) = ⟦ x ⟧v as
+⟦_⟧Ty : Ty → Set₁
+⟦ * ⟧Ty = Set
+⟦ A ⇒ B ⟧Ty = Func (HCONT A) (HCONT B)
 
-⟦_⟧nf : Nf Γ A → ⟦ Γ ⟧c → ⟦ A ⟧t
+⟦_⟧HCont : {A : Ty} → HCont A → ⟦ A ⟧Ty
+⟦_⟧HCont {*} (ne (S ◃ P ◃ R)) = S
+⟦_⟧HCont {A ⇒ B} H = record { F = ⟦ H ⟧ ; F₁ = ⟦ H ⟧₁ }
 
-⟦_⟧ne : Ne Γ * → ⟦ Γ ⟧c → Set
+T : HCont (((* ⇒ *) ⇒ *) ⇒ (* ⇒ *) ⇒ *)
+T = lam (lam (⟦ nvar vz ⟧ (⟦ nvar (vs vz) ⟧ (nvar vz))))
 
-⟦_⟧sp : Sp Γ A B → ⟦ Γ ⟧c → ⟦ A ⟧t → ⟦ B ⟧t
+{-
+postulate
+  HW : Func (HCONT (A ⇒ A)) (HCONT A)
 
-⟦ lam t ⟧nf as a = ⟦ t ⟧nf (as , a)
-⟦ ne spr ⟧nf as = ⟦ spr ⟧ne as
+W : Func (HCONT (* ⇒ *)) (HCONT *)
+W = ⟦ HW .Func.F T ⟧HCont
+-}
 
-⟦_⟧ne {Γ} (S ◃ P ◃ R) as =
-  Σ[ s ∈ S ] ({A : Ty} (x : Var Γ A) (p : P x s)
-  → ⟦ R x s p ⟧sp as (⟦ x ⟧v as))
-
-⟦ ε ⟧sp as a = a
-⟦ t , ts ⟧sp as f = ⟦ ts ⟧sp as (f (⟦ t ⟧nf as))
-
-⟦_⟧ : HCont A → ⟦ A ⟧t
-⟦ x ⟧ = ⟦ x ⟧nf (lift tt)
-
-{- Λ Terms -}
-
-data Tm : Con → Ty → Set₁ where
-  var : Var Γ A → Tm Γ A
-  lam : Tm (Γ ▹ A) B → Tm Γ (A ⇒ B)
-  app : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-  Π : (I : Set) → (I → Tm Γ A) → Tm Γ A
-  Σ : (I : Set) → (I → Tm Γ A) → Tm Γ A
-  μ : Tm Γ (A ⇒ A) → Tm Γ A
-  ν : Tm Γ (A ⇒ A) → Tm Γ A
-
-data W (S : Set) (P : S → Set) : Set where
-  sup : (s : S) (f : P s → W S P) → W S P
-
-HW HM : Nf Γ (A ⇒ A) → Nf Γ A
-
-HW {Γ} {*} (lam (ne (S ◃ P ◃ _))) = ne (W S (P vz) ◃ (λ _ _ → ⊥) ◃ λ _ _ ())
-HW {Γ} {A ⇒ B} (lam (lam x)) = lam {!!}
-HM = {!!}
-
-to : Set → HCont *
-to X = ne (X ◃ (λ ()) ◃ λ ())
-
-{- Normalization -}
-
-nf : Tm Γ A → Nf Γ A
-nf (var x) = nvar x
-nf (lam t) = lam (nf t)
-nf (app t u) = napp (nf t) (nf u)
-nf (Π I f) = Πnf I (nf ∘ f)
-nf (Σ I f) = Σnf I (nf ∘ f)
-nf (μ t) = HW (nf t)
-nf (ν t) = HM (nf t)
-
-{- Embedding -}
-
-emb : Nf Γ A → Tm Γ A
-
-embSp : Sp Γ A B → Tm Γ A → Tm Γ B
-
-emb (lam t) = lam (emb t)
-emb {Γ} {A} (ne (S ◃ P ◃ R))
-  = Σ S (λ s → Π (Var Γ A) (λ x → Π (P x s) (λ p → embSp (R x s p) (var x))))
-
-embSp ε u = u
-embSp (t , ts) u = embSp ts (app u (emb t))
+HW : HCont (A ⇒ A) → HCont A
+HW {A} (lam t) = {!!}

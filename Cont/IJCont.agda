@@ -1,106 +1,193 @@
-module Cont.ICont where
+{-# OPTIONS --guardedness #-}
+module Cont.IJCont where
 
 open import Data.Product
+open import Data.Sum
+open import Function.Base
+open import Relation.Binary.PropositionalEquality hiding (J; [_])
 
-private variable
+variable
+  X Y Z : Set
   I J K : Set
-  X Y Z : I → Set
+  A B C : I → Set
+
+{- Containers -}
 
 infix  0 _◃_
-
-record IJCont (I J : Set) : Set₁ where
+record Cont : Set₁ where
   constructor _◃_
   field
-    S : J → Set
-    P : (j : J) → S j → I → Set
+    S : Set
+    P : S → Set
 
-private variable
-  SP TQ : IJCont I J
+⟦_⟧ : Cont → Set → Set
+⟦ S ◃ P ⟧ X = Σ[ s ∈ S ] (P s → X)
 
-record IJContHom (SP TQ : IJCont I J) : Set where
-  constructor _◃_
-  open IJCont SP
-  open IJCont TQ renaming (S to T; P to Q)
-  field
-    f : (j : J) → S j → T j
-    g : (j : J) (s : S j) (i : I) → Q j (f j s) i → P j s i
+data W (SP : Cont) : Set where
+  sup : ⟦ SP ⟧ (W SP) → W SP
 
-record ⟦_⟧ (SP : IJCont I J) (X : I → Set) (j : J) : Set where
+
+Fam : Set → Set₁
+Fam I = I → Set
+
+_→*_ : (A B : I → Set) → Set
+_→*_ {I} A B = (i : I) → A i → B i
+
+id* : A →* A
+id* i a = a
+
+_∘*_ : B →* C → A →* B → A →* C
+(f ∘* g) = λ i a → f i (g i a)
+{-# INLINE _∘*_ #-}
+
+record IFunc (I : Set) : Set₁ where
   constructor _,_
-  open IJCont SP
   field
-    s : S j
-    k : (i : I) → P j s i → X i
+    obj : Fam I → Set
+    mor : ∀ {A B} → A →* B → obj A → obj B
+open IFunc    
 
-⟦_⟧₁ : (SP : IJCont I J)
-  → ((i : I) → X i → Y i)
-  → (j : J) → ⟦ SP ⟧ X j → ⟦ SP ⟧ Y j
-⟦ SP ⟧₁ f j (s , k) = s , λ i p → f i (k i p)
+_⇒ꟳ_ : IFunc I → IFunc I → Set₁
+(F , _) ⇒ꟳ(G , _) = ∀ A → F A → G A
 
-⟦_⟧Hom : (fg : IJContHom SP TQ)
-  → (j : J) → ⟦ SP ⟧ X j → ⟦ TQ ⟧ X j
-⟦ f ◃ g ⟧Hom j (s , k) = f j s , λ i p → k i (g j s i p)
+IFunc* : Set → Set → Set₁
+IFunc* I J = J → IFunc I
 
-_∘_ : IJCont J K → IJCont I J → IJCont I K
-(T ◃ Q) ∘ (S ◃ P)
-  = (λ k → Σ[ t ∈ T k ] ((j : _) → Q k t j → S j))
-  ◃ (λ k (t , f) i → Σ[ j ∈ _ ] Σ[ q ∈ Q k t j ] P j (f j q) i) 
+obj* : IFunc* I J → Fam I → Fam J
+obj* F A j = F j .obj A
+
+mor* : (F : IFunc* I J) → A →* B → obj* F A →* obj* F B
+mor* F f j = F j .mor f
+
+_⇒ꟳ*_ : IFunc* I J → IFunc* I J → Set₁
+_⇒ꟳ*_ {I} {J} F G = (A : Fam I) → (j : J) → F j .obj A → G j .obj A
+
+_[_] : ((I ⊎ J → Set) → Set) → ((I → Set) → J → Set) → (I → Set) → Set
+(F [ G ]) A = F ([ A , G A ])
+
+{- Indexed containers -}
+
+record ICont (I : Set) : Set₁ where
+  constructor _◃_
+  field
+    S : Set
+    P : S → Fam I
+
+I⟦_⟧ : ICont I → Fam I → Set
+I⟦ S ◃ P ⟧ A = Σ[ s ∈ S ] (P s →* A)
+
+I⟦_⟧₁ : (SP : ICont I) → A →* B → I⟦ SP ⟧ A → I⟦ SP ⟧ B
+I⟦ S ◃ P ⟧₁ g = λ (s , f) → s , g ∘* f
+{-# INLINE I⟦_⟧₁ #-}
+
+record ICont* (I J : Set) : Set₁ where
+  constructor _◃*_
+  field
+    S : Fam J
+    P : (j : J) → S j → Fam I
+
+⟦_⟧* : ICont* I J → Fam I → Fam J
+⟦ S ◃* P ⟧* A j = I⟦ S j ◃ P j ⟧ A
+
+⟦_⟧*₁ : (SP : ICont* I J) → A →* B → ⟦ SP ⟧* A →* ⟦ SP ⟧* B
+⟦ SP ⟧*₁ g = λ j → I⟦ SP .ICont*.S j ◃ SP .ICont*.P j ⟧₁ g
+{-# INLINE ⟦_⟧*₁ #-}
+
+_[_]ᶜ : ∀ {I J} → ICont (I ⊎ J) → ICont* I J → ICont I
+_[_]ᶜ {I} {J} (S ◃ P) (T ◃* Q) = newS ◃ newP
+  where
+  Pᴵ : S → I → Set
+  Pᴵ s i = P s (inj₁ i)
+
+  Pᴶ : S → J → Set
+  Pᴶ s j = P s (inj₂ j)
+
+  newS : Set
+  newS = I⟦ S ◃ Pᴶ ⟧ T
+
+  newP : newS → Fam I
+  newP (s , f) i = Pᴵ s i ⊎ Σ[ j ∈ J ] Σ[ p ∈ Pᴶ s j ] Q j (f j p) i
+
+{- Initial Algbebra -}
+
+data WI (SP : ICont* J J) : Fam J where
+  sup : ⟦ SP ⟧* (WI SP) →* WI SP
+
+WIfold : ∀ {SP} → ⟦ SP ⟧* A →* A → WI SP →* A
+WIfold {J} {A} {SP} α j (sup .j (s , f)) =
+  α j (s , WIfold α ∘* f)
+
+data Path (S : Fam J)
+  (Pᴵ : (j : J) → S j → Fam I)
+  (Pᴶ : (j : J) → S j → Fam J)
+  : (j : J) → WI (S ◃* Pᴶ) j → Fam I where
+  path : {i : I} {j : J} {s : S j} {f : Pᴶ j s →* WI (S ◃* Pᴶ)}
+    → Pᴵ j s i ⊎ Σ[ j' ∈ J ] Σ[ p ∈ Pᴶ j s j' ] Path S Pᴵ Pᴶ j' (f j' p) i
+    → Path S Pᴵ Pᴶ j (sup _ (s , f)) i
 
 {-
-I J K : Set
-S : J → Set
-P : I → (j : J) → S j → Set
-T : K → Set
-Q : J → (j : K) → T j → Set
-
-  ⟦ T ◃ Q ⟧ (⟦ S ◃ P ⟧ X) k
-= Σ[ t ∈ T k ] ((j : J) → Q k t j → ⟦ S ◃ P ⟧ X i)
-= Σ[ t ∈ T k ] ((j : J) → Q k t j → Σ[ s ∈ S j ] ((i : I) → P j s i → X i))
-≃ Σ[ t ∈ T k ] Σ[ f ∈ (j : J) → Q k t j → S j ] ((j : J) (q : Q k t j) (i : I) → P j (f j q) i → X i)
-≃ Σ[ (t , f) ∈ (T k × (j : J) → Q k t j → S j ] ((j : J) (q : Q k t j) (i : I) → P j (f j q) i → X i)
-≃ Σ[ (t , f) ∈ (T k × (j : J) → Q k t j → S j ] ((i : I) (j : J) (q : Q k t j) → P j (f j q) i → X i)
-≃ Σ[ (t , f) ∈ (T k × (j : J) → Q k t j → S j ] ((i : I) → Σ[ j ∈ J ] Σ[ q ∈ Q k t j ] P j (f j q) i → X i)
-= ⟦ (λ k → Σ[ t ∈ T k ] ((j : J) → Q k t j → S j)) ◃ (λ k (t , f) i → Σ[ j ∈ J ] Σ[ q ∈ Q k t j ] P j (f j q) i) ⟧ k
+pathh : (S : Fam J)
+  (Pᴵ : (j : J) → S j → Fam I)
+  (Pᴶ : (j : J) → S j → Fam J)
+  {i : I} {j : J} {s : S j} {f : Pᴶ j s →* WI (S ◃* Pᴶ)}
+  → Pᴵ j s i ⊎ Σ[ j' ∈ J ] Σ[ p ∈ Pᴶ j s j' ] Path S Pᴵ Pᴶ j' (f j' p) i → Path S Pᴵ Pᴶ j (sup _ (s , f)) i
+pathh S Pᴵ Pᴶ x = path x
 -}
-
-open import Data.Unit
-
-ICont : Set → Set₁
-ICont I = IJCont I ⊤
-
-JCont : Set → Set₁
-JCont J = IJCont ⊤ J
-
-Cont : Set₁
-Cont = IJCont ⊤ ⊤
 
 {-
-open import Data.Nat
-open import Data.Fin
-
-data List (X : Set) : Set where
-  [] : List X
-  _∷_ : X → List X → List X
-
-ListCont : Cont
-ListCont = (λ{ tt → ℕ }) ◃ λ{ tt n tt → Fin n }
-
-List' : Set → Set
-List' X = ⟦ ListCont ⟧ (λ { tt → X }) tt
-
-data Vec (X : Set) : ℕ → Set where
-  [] : Vec X 0
-  _∷_ : ∀ {n} → X → Vec X n → Vec X (suc n)
-
-tail : {X : Set} {n : ℕ} → Vec X (suc n) → Vec X n
-tail (x ∷ xs) = xs
-
-VecJCont : JCont ℕ
-VecJCont = Fin ◃ λ{ n i tt → Fin n }
-
-JContHom = IJContHom {I = ⊤}
-
-tailHom : JContHom VecJCont VecJCont
-tailHom = (λ{ (suc n) i → i }) ◃ λ{ (suc n) s tt x → s }
-
+I want to have:
+record MI (SP : ICont* J J) : J → Set where
+  coinductive
+  destructor
+    inf : MI SP →* ⟦ SP ⟧* (MI SP)
 -}
+
+record MI (SP : ICont* J J) (j : J) : Set where
+  coinductive
+  field
+    inf : ⟦ SP ⟧* (MI SP) j
+open MI
+
+{-
+I want to have:
+record _≈ᴹᴵ_ {j : J} {SP : ICont* J J} : MI SP j → MI SP j → Set where
+  coinductive
+  open ICont* SP
+  destructor
+    inf≈ : M₁ ≈ᴹᴵ M₂ → ?
+-}
+
+
+record _≈ᴹᴵ_ {j : J} {SP : ICont* J J} (M₁ M₂ : MI SP j) : Set where
+  coinductive
+  open ICont* SP
+  field
+    inf≈ : {s : S j} {f g : P j s →* MI SP}
+      → inf M₁ ≡ (s , f) → inf M₂ ≡ (s , g)
+      → {j' : J} {p : P j s j'}
+      → f j' p ≈ᴹᴵ g j' p
+open _≈ᴹᴵ_      
+
+≈ᴹᴵrefl : {j : J} {SP : ICont* J J} {m : MI SP j} → m ≈ᴹᴵ m
+inf≈ ≈ᴹᴵrefl refl refl = ≈ᴹᴵrefl
+
+postulate
+  MIext : {j : J} {SP : ICont* J J} {m₁ m₂ : MI SP j}
+    → m₁ ≈ᴹᴵ m₂ → m₁ ≡ m₂
+
+MIext⁻¹ : {j : J} {SP : ICont* J J} {m₁ m₂ : MI SP j}
+  → m₁ ≡ m₂ → m₁ ≈ᴹᴵ m₂
+MIext⁻¹ refl = ≈ᴹᴵrefl
+  
+MIunfold : ∀ {SP} → A →* ⟦ SP ⟧* A → A →* MI SP
+inf (MIunfold {J} {A} {SP} α j a) with α j a
+... | s , f = s , MIunfold α ∘* f
+
+WI' : ICont* I I → Set
+WI' {I} (S ◃* Pᴵ) = W (newS ◃ newP)
+  where
+  newS : Set
+  newS = Σ[ i ∈ I ] S i
+
+  newP : newS → Set
+  newP (i , sᵢ) = Σ[ i' ∈ I ] Pᴵ i sᵢ i'

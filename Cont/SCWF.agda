@@ -18,6 +18,25 @@ funExt⁻ : {A : Set} {B : A → Set} {f g : (x : A) → B x}
   → (x : A) → f x ≡ g x
 funExt⁻ refl x = refl
 
+open import Agda.Primitive
+
+record _≅_ {ℓ} (A B : Set ℓ) : Set (lsuc ℓ) where
+  field
+    to : A → B
+    from : B → A
+    to∘from : ∀ {B} → to (from B) ≡ B
+    from∘to : ∀ {A} → from (to A) ≡ A
+
+postulate
+  setExt : ∀ {ℓ} {A B : Set ℓ}
+    → A ≅ B → A ≡ B
+
+{-
+setExt⁻ : ∀ {ℓ} {A B : Set ℓ}
+  → A ≡ B → A ≅ B
+setExt⁻ refl = record { to =  ; from = id ; to∘from = refl ; from∘to = refl }
+-}
+
 {-- Syntax --}
   
 {- Types & Contexts & Variables -}
@@ -344,7 +363,7 @@ ne≡ refl refl refl = refl
 
 [id] : {Γ : Con} {A : Ty} {t : Nf Γ A} → t [ id ] ≡ t
 [id] {Γ} {A ⇒ B} {lam t} = cong lam [id]
-[id] {Γ} {*} {ne (S ◃ P ◃ R)} = cong ne (ne≡ {!!} {!!} {!!})
+[id] {Γ} {*} {ne (S ◃ P ◃ R)} = cong ne (ne≡ {!setExt!} {!!} {!!})
 
 ↑∘ : {Γ Δ Θ : Con} {γ : Nfs Δ Γ} {δ : Nfs Θ Δ} {A : Ty}
   → _↑ {A = A} (γ ∘ δ) ≡ (γ ↑) ∘ (δ ↑)

@@ -1,5 +1,3 @@
-{-# OPTIONS --guardedness #-}
-
 module Cont.Cont where
 
 open import Data.Empty
@@ -7,15 +5,16 @@ open import Data.Unit
 open import Data.Sum
 open import Data.Product
 open import Function.Base
+open import Relation.Binary.PropositionalEquality hiding (J; [_])
+
+private variable
+  I J K : Set
+  A B C : I → Set  
+  X Y Z : Set
 
 {- Containers -}
 
 infix  0 _◃_
-infixr 0 _→ᶜ_
-infixr 9 _∘ᶜ_
-infixr 2 _×ᶜ_
-infixr 1 _⊎ᶜ_
-
 record Cont : Set₁ where
   constructor _◃_
   field
@@ -25,37 +24,41 @@ record Cont : Set₁ where
 variable
   SP TQ SP' TQ' UV UV' : Cont
 
-record ⟦_⟧ (SP : Cont) (X : Set) : Set where
-  constructor _,_
-  open Cont SP
-  field
-    s : S
-    f : (p : P s) → X
+⟦_⟧ : Cont → Set → Set
+⟦ S ◃ P ⟧ X = Σ[ s ∈ S ] (P s → X)
 
-⟦_⟧₁ : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
-⟦ SP ⟧₁ g sf = sf .s , g ∘ sf .f
-  where open ⟦_⟧
-{-# INLINE ⟦_⟧₁ #-}
+⟦_⟧₁ : (SP : Cont) → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
+⟦ SP ⟧₁ g (s , f) = s , g ∘ f
 
-⟦_⟧₁' : (SP : Cont) {X Y : Set} → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
-⟦ SP ⟧₁' g (s , f) = s , g ∘ f
+⟦_⟧-id : (SP : Cont) → ⟦ SP ⟧₁ (id {A = X}) ≡ id
+⟦ SP ⟧-id = refl
+
+⟦_⟧-∘ : (SP : Cont) {f : Y → Z} {g : X → Y}
+  → ⟦ SP ⟧₁ (f ∘ g) ≡ ⟦ SP ⟧₁ f ∘ ⟦ SP ⟧₁ g
+⟦ SP ⟧-∘ = refl
 
 {- Category of Containers -}
 
+infixr 0 _→ᶜ_
 record _→ᶜ_ (SP TQ : Cont) : Set where
   constructor _◃_
   open Cont SP
   open Cont TQ renaming (S to T; P to Q)
   field
-    g : S → T
-    h : (s : S) → Q (g s) → P s
+    fS : S → T
+    fP : (s : S) → Q (fS s) → P s
 
-⟦_⟧→ᶜ : SP →ᶜ TQ → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-⟦ g ◃ h ⟧→ᶜ X (s , f) = g s , f ∘ h s
+⟦_⟧₂ : SP →ᶜ TQ → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+⟦ fS ◃ fP ⟧₂ X (s , f) = fS s , f ∘ fP s
+
+⟦_⟧→ᶜ-nat : (α : SP →ᶜ TQ) (f : X → Y)
+  → ⟦ α ⟧₂ Y ∘ ⟦ SP ⟧₁ f ≡ ⟦ TQ ⟧₁ f ∘ ⟦ α ⟧₂ X
+⟦ fS ◃ fP ⟧→ᶜ-nat f = refl
 
 idᶜ : SP →ᶜ SP
 idᶜ = id ◃ λ s → id
 
+infixr 9 _∘ᶜ_
 _∘ᶜ_ : TQ →ᶜ UV → SP →ᶜ TQ → SP →ᶜ UV
 (g ◃ h) ∘ᶜ (g' ◃ h') = (g ∘ g') ◃ λ s → h' s ∘ h (g' s)
 
@@ -65,6 +68,7 @@ _∘ᶜ_ : TQ →ᶜ UV → SP →ᶜ TQ → SP →ᶜ UV
 ⊥ᶜ : Cont
 ⊥ᶜ = ⊥ ◃ λ ()
 
+infixr 2 _×ᶜ_
 _×ᶜ_ : Cont → Cont → Cont
 (S ◃ P) ×ᶜ (T ◃ Q) = S × T ◃ λ (s , t) → P s ⊎ Q t
 
@@ -73,6 +77,7 @@ _×ᶜ₁_ : SP →ᶜ TQ → SP' →ᶜ TQ' → SP ×ᶜ SP' →ᶜ TQ ×ᶜ TQ
   = (λ (s , s') → g s , g' s')
   ◃ λ{ (s , s') (inj₁ p) → inj₁ (h s p) ; (s , s') (inj₂ p') → inj₂ (h' s' p') }
 
+infixr 1 _⊎ᶜ_
 _⊎ᶜ_ : Cont → Cont → Cont
 (S ◃ P) ⊎ᶜ (T ◃ Q) = S ⊎ T ◃ λ{ (inj₁ s) → P s ; (inj₂ t) → Q t }
 
@@ -129,6 +134,7 @@ proj₂ᶜ = proj₂ ◃ λ{ (S , T) q → inj₂ q }
 < f ◃ g , f' ◃ g' >ᶜ = < f , f' > ◃ λ{ s (inj₁ p) → g s p ; s (inj₂ q) → g' s q }
 
 inj₁ᶜ : SP →ᶜ SP ⊎ᶜ TQ
+
 inj₁ᶜ = inj₁ ◃ λ s p → p
 
 inj₂ᶜ : TQ →ᶜ SP ⊎ᶜ TQ
@@ -245,7 +251,3 @@ open import Data.Fin
   ⨂ᶜP {zero} f tt = ⊤
   ⨂ᶜP {suc n} f (s , g) with f zero
   ... | S ◃ P = Σ[ p ∈ P s ] ⨂ᶜP {n} (f ∘ suc) (g p)
-
-{- Equality -}
-
-open import Relation.Binary.PropositionalEquality

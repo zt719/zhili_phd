@@ -1,50 +1,58 @@
-{-# OPTIONS --guardedness #-}
+{-# OPTIONS --guardedness --with-K #-}
 
-module Cont.2ContWM where
+module Cont.2Cont where
 
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum
 open import Data.Product
 open import Function.Base
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.PropositionalEquality hiding (J)
 
 variable X Y : Set
 
+uip : ∀ {ℓ} {A : Set ℓ} {x y : A}
+  (p q : x ≡ y) → p ≡ q
+uip refl refl = refl
+
 postulate
-  funExt :
-    ∀ {ℓ ℓ'} {A : Set ℓ} {B : A → Set ℓ'}
-    {f g : (a : A) → B a} →
-    ((a : A) → f a ≡ g a) →
-    f ≡ g
-{-
-funExt₂ : ∀ {ℓ ℓ' ℓ''}
-  {A : Set ℓ} {B : A → Set ℓ'}
-  {C : (a : A) → B a → Set ℓ''}
-  {f g : (a : A) (b : B a) → C a b}
-  (a : A) (b : B a) → f a b ≡ g a b →
-  f ≡ g
-funExt₂ = {!!}
--}
+  funExt : ∀ {ℓ ℓ'} {A : Set ℓ} {B : A → Set ℓ'}
+    {f g : (a : A) → B a}
+    → ((a : A) → f a ≡ g a)
+    → f ≡ g
 
 funExt⁻ : ∀ {ℓ ℓ'} {A : Set ℓ} {B : A → Set ℓ'}
-  {f g : (a : A) → B a} →
-  f ≡ g →
-  (a : A) → f a ≡ g a
+  {f g : (a : A) → B a}
+  → f ≡ g
+  → (a : A) → f a ≡ g a
 funExt⁻ refl a = refl
 
-Σ-≡-intro :
+open import Agda.Primitive
+
+record _≅_ {ℓ} (A B : Set ℓ) : Set (lsuc ℓ) where
+  field
+    to : A → B
+    from : B → A
+    to∘from : to ∘ from ≡ id
+    from∘to : from ∘ to ≡ id
+
+postulate
+  setExt : ∀ {ℓ} {A B : Set ℓ}
+    → A ≅ B → A ≡ B
+  
+setExt⁻ : ∀ {ℓ} {A B : Set ℓ}
+  → A ≡ B → A ≅ B
+setExt⁻ refl = record { to = id ; from = id ; to∘from = refl ; from∘to = refl }
+
+Σ-≡ :
   ∀ {ℓ ℓ'} {A : Set ℓ} {B : A → Set ℓ'} {a₁ a₂ : A} {b₁ : B a₁} {b₂ : B a₂} →
   Σ (a₁ ≡ a₂) (λ p → subst B p b₁ ≡ b₂) →
   (a₁ , b₁) ≡ (a₂ , b₂)
-Σ-≡-intro (refl , refl) = refl
+Σ-≡ (refl , refl) = refl
 
 {- Containers -}
 
 infix  0 _◃_
-infixr 0 _→ᶜ_
-infixr 9 _∘ᶜ_
-
 record Cont : Set₁ where
   constructor _◃_
   field
@@ -58,10 +66,11 @@ variable
 ⟦ S ◃ P ⟧ X = Σ[ s ∈ S ] (P s → X)
 
 ⟦_⟧₁ : (SP : Cont) → (X → Y) → ⟦ SP ⟧ X → ⟦ SP ⟧ Y
-⟦ SP ⟧₁ g (s , f) = s , g ∘ f
+⟦ SP ⟧₁ g  (s , f) = s , g ∘ f
 
 {- Category of Containers -}
 
+infixr 0 _→ᶜ_
 record _→ᶜ_ (SP TQ : Cont) : Set where
   constructor _◃_
   open Cont SP
@@ -69,6 +78,9 @@ record _→ᶜ_ (SP TQ : Cont) : Set where
   field
     fS : S → T
     fP : (s : S) → Q (fS s) → P s
+
+⟦_⟧→ᶜ : SP →ᶜ TQ → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+⟦ fS ◃ fP ⟧→ᶜ X (s , f) = fS s , f ∘ fP s
 
 →ᶜ-≡-intro :
   {S T : Set} {P : S → Set} {Q : T → Set}
@@ -82,6 +94,7 @@ record _→ᶜ_ (SP TQ : Cont) : Set where
 idᶜ : SP →ᶜ SP
 idᶜ = id ◃ λ s → id
 
+infixr 9 _∘ᶜ_
 _∘ᶜ_ : TQ →ᶜ UV → SP →ᶜ TQ → SP →ᶜ UV
 (g ◃ h) ∘ᶜ (g' ◃ h') = (g ∘ g') ◃ λ s → h' s ∘ h (g' s)
 
@@ -108,7 +121,7 @@ module _ (X : Set) (SP : Cont) (g : ⟦ SP ⟧ X → X) where
     (commuteW' : (sf : ⟦ SP ⟧ (W SP)) → foldW' (sup sf) ≡ g (⟦ SP ⟧₁ foldW' sf))
     → (w : W SP) → foldW' w ≡ foldW w
   !foldW foldW' commuteW' (sup (s , f)) = trans (commuteW' (s , f))
-    (cong g (Σ-≡-intro (refl , funExt λ a → !foldW foldW' commuteW' (f a))))
+    (cong g (Σ-≡ (refl , funExt λ a → !foldW foldW' commuteW' (f a))))
 
 {- 2nd Order Container -}
 
@@ -122,119 +135,154 @@ record 2Cont : Set₁ where
     PF : S → Set
     RF : (s : S) → PF s → 2Cont
 
-2⟦_⟧S' : (H : 2Cont) (T : Set) (Q : T → Set) → Set
-2⟦ S ◃ PX + PF + RF ⟧S' T Q
-  = Σ[ s ∈ S ] ((pf : PF s) → Σ[ t ∈ T ] (Q t → 2⟦ RF s pf ⟧S' T Q))
+variable H J SPPR TQQL : 2Cont
 
-2⟦_⟧P' : (H : 2Cont) (T : Set) (Q : T → Set) → 2⟦ H ⟧S' T Q → Set
-2⟦ S ◃ PX + PF + RF ⟧P' T Q (s , f)
-  = Σ[ pf ∈ PF s ] let (t , f') = f pf in
-    Σ[ q ∈ Q t ] (2⟦ RF s pf ⟧P' T Q (f' q) ⊎ PX s)
+2⟦_⟧T : 2Cont → (Set → Set) → Set → Set
+2⟦ S ◃ PX + PF + RF ⟧T F X
+  = Σ[ s ∈ S ] (PX s → X × ((pF : PF s) → 2⟦ RF s pF ⟧T F X))
 
 2⟦_⟧S : (H : 2Cont) (TQ : Cont) → Set
-2⟦ H ⟧S (T ◃ Q) = 2⟦ H ⟧S' T Q
+2⟦ S ◃ PX + PF + RF ⟧S (T ◃ Q) = Σ[ s ∈ S ] ((pF : PF s) → Σ[ t ∈ T ] (Q t → 2⟦ RF s pF ⟧S (T ◃ Q)))
 
 2⟦_⟧P : (H : 2Cont) (TQ : Cont) → 2⟦ H ⟧S TQ → Set
-2⟦ H ⟧P (T ◃ Q) = 2⟦ H ⟧P' T Q
+2⟦ S ◃ PX + PF + RF ⟧P (T ◃ Q) (s , f) =
+  Σ[ pF ∈ PF s ] let (t , f') = f pF in
+    Σ[ q ∈ Q t ] (2⟦ RF s pF ⟧P (T ◃ Q) (f' q) ⊎ PX s)
 
 2⟦_⟧ : 2Cont → Cont → Cont
 2⟦ H ⟧ F = 2⟦ H ⟧S F ◃ 2⟦ H ⟧P F
 
-2⟦_⟧S₁ : (H : 2Cont) → F →ᶜ G → 2⟦ H ⟧S F → 2⟦ H ⟧S G
-2⟦ S ◃ PX + PF + RF ⟧S₁ (g ◃ h) (s , f)
-  = s , λ pf → let (t , f') = f pf in
-    g t , λ q → 2⟦ RF s pf ⟧S₁ (g ◃ h) (f' (h t q))
+2⟦_⟧S₁ : (H : 2Cont) → TQ →ᶜ UV → 2⟦ H ⟧S TQ → 2⟦ H ⟧S UV
+2⟦ S ◃ PX + PF + RF ⟧S₁ (fT ◃ fQ) (s , f) =
+  s , λ pF → let (t , f') = f pF in fT t , λ q → 2⟦ RF s pF ⟧S₁ (fT ◃ fQ) (f' (fQ t q))
 
-2⟦_⟧P₁ : (H : 2Cont) (gh : F →ᶜ G) (s : 2⟦ H ⟧S F) → 2⟦ H ⟧P G (2⟦ H ⟧S₁ gh s) → 2⟦ H ⟧P F s
-2⟦ S ◃ PX + PF + RF ⟧P₁ (g ◃ h) (s , f) (pf , q , inj₁ p')
-  = let (t , f') = f pf in pf , h t q , inj₁ (2⟦ RF s pf ⟧P₁ (g ◃ h) (f' (h t q)) p')
-2⟦ S ◃ PX + PF + RF ⟧P₁ (g ◃ h) (s , f) (pf , q , inj₂ px)
-  = let (t , f') = f pf in pf , h t q , inj₂ px
+2⟦_⟧P₁ : (H : 2Cont) (α : TQ →ᶜ UV) (s : 2⟦ H ⟧S TQ) → 2⟦ H ⟧P UV (2⟦ H ⟧S₁ α s) → 2⟦ H ⟧P TQ s
+2⟦ S ◃ PX + PF + RF ⟧P₁ (fT ◃ fQ) (s , f) (pF , q , inj₁ p')
+  = let (t , f') = f pF in pF , fQ t q , inj₁ (2⟦ RF s pF ⟧P₁ (fT ◃ fQ) (f' (fQ t q)) p')
+2⟦ S ◃ PX + PF + RF ⟧P₁ (fT ◃ fQ) (s , f) (pF , q , inj₂ px)
+  = let (t , f') = f pF in pF , fQ t q , inj₂ px
 
-2⟦_⟧₁ : (H : 2Cont) → F →ᶜ G → 2⟦ H ⟧ F →ᶜ 2⟦ H ⟧ G
-2⟦ H ⟧₁ F = 2⟦ H ⟧S₁ F ◃ 2⟦ H ⟧P₁ F
+2⟦_⟧₁ : (H : 2Cont) → TQ →ᶜ UV → 2⟦ H ⟧ TQ →ᶜ 2⟦ H ⟧ UV
+2⟦ H ⟧₁ α = 2⟦ H ⟧S₁ α ◃ 2⟦ H ⟧P₁ α
 
-{- 2W & 2M -}
+record _→²ᶜ_ (SPPR TQQL : 2Cont) : Set₁ where
+  inductive
+  constructor _◃_+_+_
+  pattern
+  open 2Cont SPPR
+  open 2Cont TQQL renaming (S to T; PX to QX; PF to QF; RF to LF)
+  field
+    fS : S → T
+    fPX : (s : S) → QX (fS s) → PX s
+    fPF : (s : S) → QF (fS s) → PF s
+    fRF : (s : S) (qF : QF (fS s)) → RF s (fPF s qF) →²ᶜ LF (fS s) qF
 
+⟦_⟧→²ᶜ : H →²ᶜ J → (F : Cont) → 2⟦ H ⟧ F →ᶜ 2⟦ J ⟧ F
+⟦ α ⟧→²ᶜ F = gS α F ◃ gP α F
+  where
+  gS : H →²ᶜ J → (F : Cont) → 2⟦ H ⟧S F → 2⟦ J ⟧S F
+  gS {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (fS ◃ fPX + fPF + fRF) F (s , f)
+    = fS s , λ qF → let (u , f') = f (fPF s qF) in u , λ v → gS (fRF s qF) F (f' v)
 
-data 2WS' (H H' : 2Cont) : Set
+  gP : (α : H →²ᶜ J) (F : Cont) (s : 2⟦ H ⟧S F) → 2⟦ J ⟧P F (gS α F s) → 2⟦ H ⟧P F s
+  gP {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (fS ◃ fPX + fPF + fRF) F (s , f) (qF , v , inj₁ pr)
+    = fPF s qF , let (u , f') = f (fPF s qF) in v , inj₁ (gP (fRF s qF) F (f' v) pr)
+  gP {S ◃ PX + PF + RF} {T ◃ QX + QF + LF} (fS ◃ fPX + fPF + fRF) F (s , f) (qF , v , inj₂ qX)
+    = fPF s qF , v , inj₂ (fPX s qX)
+
+{- 2W -}
+
+record 2WS' (H H' : 2Cont) : Set
+
 2WP' : (H H' : 2Cont) → 2WS' H H' → Set
 
-data 2WS' H H' where
-  2supS' : (open 2Cont H')
-    → Σ[ s ∈ S ] ((pf : PF s) → Σ[ t ∈ 2WS' H H ] (2WP' H H t → 2WS' H (RF s pf)))
-    → 2WS' H H'
+record 2WS' H H' where
+  constructor _,_
+  inductive
+  pattern
+  open 2Cont H'
+  field
+    s : S
+    f : (pF : PF s) → Σ[ t ∈ 2WS' H H ] (2WP' H H t → 2WS' H (RF s pF))
 
-2WP' H (S ◃ PX + PF + RF) (2supS' (s , f))
-  = Σ[ pf ∈ PF s ] let (s' , f') = f pf in
-    Σ[ p' ∈ 2WP' H H s' ] (2WP' H (RF s pf) (f' p') ⊎ PX s)
+2WP' H (S ◃ PX + PF + RF) (s , f) =
+  Σ[ pF ∈ PF s ] let (s' , f') = f pF in
+  Σ[ q ∈ 2WP' H H s' ] (2WP' H (RF s pF) (f' q) ⊎ PX s)
 
 2W : 2Cont → Cont
 2W H = 2WS' H H ◃ 2WP' H H
 
-2supS : {H H' : 2Cont} → 2⟦ H' ⟧S (2W H) → 2WS' H H'
-2supS {H} {S ◃ PX + PF + RF} (s , f) =
-  2supS' (s , λ pf → let (s' , f') = f pf in s' , λ p' → 2supS (f' p'))
+2supS' : {H H' : 2Cont} → 2⟦ H' ⟧S (2W H) → 2WS' H H'
+2supS' {H} {S ◃ PX + PF + RF} (s , f) = s , λ pF → let (s' , f') = f pF in s' , λ p' → 2supS' (f' p')
 
-2supP : {H H' : 2Cont} (s : 2⟦ H' ⟧S (2W H)) →
-  2WP' H H' (2supS s) → 2⟦ H' ⟧P (2W H) s
-2supP {H} {S ◃ PX + PF + RF} (s , f) (pf , p' , inj₁ pr) =
-  let (s' , f') = f pf in pf , p' , inj₁ (2supP (f' p') pr)
-2supP {H} {S ◃ PX + PF + RF} (s , f) (pf , p' , inj₂ px) =
-  pf , p' , inj₂ px
+2supP' : {H H' : 2Cont} (s : 2⟦ H' ⟧S (2W H)) →
+  2WP' H H' (2supS' s) → 2⟦ H' ⟧P (2W H) s
+2supP' {H} {S ◃ PX + PF + RF} (s , f) (pF , p' , inj₁ pR) =
+  let (s' , f') = f pF in pF , p' , inj₁ (2supP' (f' p') pR)
+2supP' {H} {S ◃ PX + PF + RF} (s , f) (pF , p' , inj₂ pX) =
+  pF , p' , inj₂ pX
 
 2sup : {H : 2Cont} → 2⟦ H ⟧ (2W H) →ᶜ 2W H
-2sup = 2supS ◃ 2supP
+2sup = 2supS' ◃ 2supP'
 
-2supS⁻ : {H H' : 2Cont} → 2WS' H H' → 2⟦ H' ⟧S (2W H)
-2supS⁻ {H} {S ◃ PX + PF + RF} (2supS' (s , f)) =
-  s , λ pf → let (s' , f') = f pf in s' , λ p' → 2supS⁻ (f' p')
+2supS'⁻ : {H H' : 2Cont} → 2WS' H H' → 2⟦ H' ⟧S (2W H)
+2supS'⁻ {H} {S ◃ PX + PF + RF} (s , f) =
+  s , λ pF → let (s' , f') = f pF in s' , λ p' → 2supS'⁻ (f' p')
 
-2supP⁻ : {H H' : 2Cont} (s : 2WS' H H')
-  → 2⟦ H' ⟧P (2W H) (2supS⁻ s) → 2WP' H H' s
-2supP⁻ {H} {S ◃ PX + PF + RF} (2supS' (s , f)) (pf , p' , inj₁ pr) =
-  let (s' , f') = f pf in pf , p' , inj₁ (2supP⁻ (f' p') pr)
-2supP⁻ {H} {S ◃ PX + PF + RF} (2supS' (s , f)) (pf , p' , inj₂ px) =
-  pf , p' , inj₂ px
-  
+2supP'⁻ : {H H' : 2Cont} (s : 2WS' H H')
+  → 2⟦ H' ⟧P (2W H) (2supS'⁻ s) → 2WP' H H' s
+2supP'⁻ {H} {S ◃ PX + PF + RF} (s , f) (pF , p' , inj₁ pr) =
+  let (s' , f') = f pF in pF , p' , inj₁ (2supP'⁻ (f' p') pr)
+2supP'⁻ {H} {S ◃ PX + PF + RF} (s , f) (pF , p' , inj₂ pX) =
+  pF , p' , inj₂ pX
+   
 2sup⁻ : {H : 2Cont} → 2W H →ᶜ 2⟦ H ⟧ (2W H)
-2sup⁻ = 2supS⁻ ◃ 2supP⁻
+2sup⁻ = 2supS'⁻ ◃ 2supP'⁻
 
-module _ {H : 2Cont} {T : Set} {Q : T → Set}
-  {g : 2⟦ H ⟧S (T ◃ Q) → T}
-  {h : (s : 2⟦ H ⟧S (T ◃ Q)) → Q (g s) → 2⟦ H ⟧P (T ◃ Q) s}
-  where
+{- Example -- List -}
 
-  {-# TERMINATING #-}
-  fold2WS' : {H' : 2Cont}
-    {g' : 2⟦ H' ⟧S (T ◃ Q) → T}
-    {h' : (s : 2⟦ H' ⟧S (T ◃ Q)) → Q (g' s) → 2⟦ H' ⟧P (T ◃ Q) s}  
-    → 2WS' H H' → T
-    
-  fold2WP' : {H' : 2Cont}
-    {g' : 2⟦ H' ⟧S (T ◃ Q) → T}
-    {h' : (s : 2⟦ H' ⟧S (T ◃ Q)) → Q (g' s) → 2⟦ H' ⟧P (T ◃ Q) s}  
-    → (s : 2WS' H H') → Q (fold2WS' {H'} {g'} {h'} s)
-    → 2WP' H H' s
+ListSig : (Set → Set) → Set → Set
+ListSig F X = ⊤ ⊎ F X
 
-  fold2WS' {S ◃ PX + PF + RF} {g'} {h'} (2supS' (s , f)) =  
-    g' (s , λ pf → let (s' , f') = f pf in fold2WS' {H} {g} {h} s'
-    , λ q → 2⟦ RF s pf ⟧S₁ (fold2WS' {H} {g} {h} ◃ fold2WP' {H} {g} {h})
-      (2supS⁻ (f' (fold2WP' s' q))))
+ListSigCont : 2Cont
+ListSigCont =
+  (⊤ ⊎ ⊤) ◃ (λ x → ⊥) + (λ{ (inj₁ tt) → ⊥ ; (inj₂ tt) → ⊤ }) + λ{ (inj₂ tt) tt →
+  ⊤ ◃ (λ x → ⊤) + (λ x → ⊥) + λ _ () }
+
+Listᶜ : Cont
+Listᶜ = 2W ListSigCont
+
+List : Set → Set
+List = ⟦ Listᶜ ⟧
 
 {-
-2⟦_⟧S₁ : (H : 2Cont) → F →ᶜ G → 2⟦ H ⟧S F → 2⟦ H ⟧S G
-2⟦ S ◃ PX + PF + RF ⟧S₁ (g ◃ h) (s , f)
-  = s , λ pf → let (t , f') = f pf in
-    g t , λ q → 2⟦ RF s pf ⟧S₁ (g ◃ h) (f' (h t q))
-
-2supS⁻ : {H H' : 2Cont} → 2WS' H H' → 2⟦ H' ⟧S (2W H)
-2supS⁻ {H} {S ◃ PX + PF + RF} (2supS' (s , f)) =
-  s , λ pf → let (s' , f') = f pf in s' , λ p' → 2supS⁻ (f' p')
+{-# TERMINATING #-}
+fold2W : {H : 2Cont} {TQ : Cont}
+  → 2⟦ H ⟧ TQ →ᶜ TQ
+  → 2W H →ᶜ TQ
+fold2W {H} α = α ∘ᶜ 2⟦ H ⟧₁ (fold2W {H} α) ∘ᶜ 2sup⁻ 
 -}
 
-  fold2WP' {S ◃ PX + PF + RF} {g'} {h'} (2supS' (s , f)) q
-    = {!!} , {!!}
+{-
+fold2WS' : {T : Set} {Q : T → Set} {H H' : 2Cont}
+  → (2⟦ H ⟧ (T ◃ Q) →ᶜ (T ◃ Q))
+  → (2⟦ H' ⟧ (T ◃ Q) →ᶜ (T ◃ Q))
+  → 2WS' H H' → T
 
-  fold2W : 2W H →ᶜ (T ◃ Q)
-  fold2W = fold2WS' {H} {g} {h} ◃ fold2WP' {H} {g} {h}
+fold2WP' : {T : Set} {Q : T → Set} {H H' : 2Cont} 
+  → (α : 2⟦ H ⟧ (T ◃ Q) →ᶜ (T ◃ Q))  
+  → (α' : 2⟦ H' ⟧ (T ◃ Q) →ᶜ (T ◃ Q))
+  → (s : 2WS' H H') → Q (fold2WS' α α' s) → 2WP' H H' s
+
+fold2WS' {T} {Q} {H} {S ◃ PX + PF + RF} α (αS' ◃ αP') (s , f) = 
+  αS' (s , λ pF → let (t , g) = f pF in fold2WS' α α t , λ q → 
+  2⟦ RF s pF ⟧S₁ (fold2WS' α α ◃ fold2WP' α α) (2supS'⁻ (g (fold2WP' α α t q))))
+
+fold2WP' = {!!}
+
+
+fold2W : {TQ : Cont} {H : 2Cont} 
+  → 2⟦ H ⟧ TQ →ᶜ TQ
+  → 2W H →ᶜ TQ
+fold2W α = fold2WS' α α ◃ fold2WP' α α
+-}
