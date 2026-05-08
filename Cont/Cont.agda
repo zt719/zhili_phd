@@ -12,6 +12,24 @@ private variable
   A B C : I → Set  
   X Y Z : Set
 
+postulate
+  funExt : ∀ {ℓ ℓ'} {A : Set ℓ} {B : A → Set ℓ'}
+    {f g : (a : A) → B a}
+    → ((a : A) → f a ≡ g a)
+    → f ≡ g
+
+funExt⁻ : ∀ {ℓ ℓ'} {A : Set ℓ} {B : A → Set ℓ'}
+  {f g : (a : A) → B a}
+  → f ≡ g
+  → (a : A) → f a ≡ g a
+funExt⁻ refl a = refl
+
+Σ-≡ :
+  ∀ {ℓ ℓ'} {A : Set ℓ} {B : A → Set ℓ'} {a₁ a₂ : A} {b₁ : B a₁} {b₂ : B a₂} →
+  Σ (a₁ ≡ a₂) (λ p → subst B p b₁ ≡ b₂) →
+  (a₁ , b₁) ≡ (a₂ , b₂)
+Σ-≡ (refl , refl) = refl
+
 {- Containers -}
 
 infix  0 _◃_
@@ -46,14 +64,47 @@ record _→ᶜ_ (SP TQ : Cont) : Set where
   open Cont TQ renaming (S to T; P to Q)
   field
     fS : S → T
-    fP : (s : S) → Q (fS s) → P s
+    fP : (s : S) → Q (fS s) → P s    
 
-⟦_⟧₂ : SP →ᶜ TQ → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
-⟦ fS ◃ fP ⟧₂ X (s , f) = fS s , f ∘ fP s
+⟦_⟧→ᶜ : SP →ᶜ TQ → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+⟦ fS ◃ fP ⟧→ᶜ X (s , f) = fS s , f ∘ fP s
 
 ⟦_⟧→ᶜ-nat : (α : SP →ᶜ TQ) (f : X → Y)
-  → ⟦ α ⟧₂ Y ∘ ⟦ SP ⟧₁ f ≡ ⟦ TQ ⟧₁ f ∘ ⟦ α ⟧₂ X
+  → ⟦ α ⟧→ᶜ Y ∘ ⟦ SP ⟧₁ f ≡ ⟦ TQ ⟧₁ f ∘ ⟦ α ⟧→ᶜ X
 ⟦ fS ◃ fP ⟧→ᶜ-nat f = refl
+
+module fullyfaithful where
+
+  →ᶜ-≡ : {S : Set} {P : S → Set} {T : Set} {Q : T → Set}
+    → {fS fS' : S → T} {fP : (s : S) → Q (fS s) → P s}
+    → {fP' : (s : S) → Q (fS' s) → P s}
+    → (fS-eq : fS ≡ fS')
+    → (fP-eq : fP ≡ λ s q → fP' s (subst Q (funExt⁻ fS-eq s) q))
+    → _≡_ {A = (S ◃ P) →ᶜ (T ◃ Q)} (fS ◃ fP) (fS' ◃ fP')
+  →ᶜ-≡ refl refl = refl
+
+  to : SP →ᶜ TQ → (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X
+  to = ⟦_⟧→ᶜ
+
+{-
+  faith : (α β : SP →ᶜ TQ)
+    → ((X : Set) (sf : ⟦ SP ⟧ X) → to α X sf ≡ to β X sf)
+    → α ≡ β
+  faith (fS ◃ fP) (fS' ◃ fP') p = →ᶜ-≡ {!!} {!!}
+-}
+
+  from : ((X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X) → SP →ᶜ TQ
+  from {S ◃ P} {T ◃ Q} η = 
+    (λ s → η (P s) (s , id) .proj₁)
+    ◃ λ s → η (P s) (s , id) .proj₂
+
+  from∘to : (α : SP →ᶜ TQ) → from (to α) ≡ α
+  from∘to α = refl
+
+{-
+  to∘from : (η : (X : Set) → ⟦ SP ⟧ X → ⟦ TQ ⟧ X) → to (from η) ≡ η
+  to∘from {S ◃ P} {T ◃ Q} η = funExt λ X → funExt λ{ (s , f) → Σ-≡ ({!!} , {!!})}
+-}
 
 idᶜ : SP →ᶜ SP
 idᶜ = id ◃ λ s → id

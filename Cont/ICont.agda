@@ -3,10 +3,9 @@
 module Cont.ICont where
 
 open import Data.Unit
-open import Data.Nat
-open import Data.Fin
 open import Data.Product
 open import Data.Sum
+open import Data.Bool
 open import Function.Base
 open import Relation.Binary.PropositionalEquality hiding (J; [_])
 
@@ -25,101 +24,47 @@ _∘*_ : B →* C → A →* B → A →* C
 (f ∘* g) = λ i a → f i (g i a)
 {-# INLINE _∘*_ #-}
 
-{-
-record JFunc (J : Set) : Set₁ where
-  constructor _,_
-  field
-    F : J → Set → Set
-    F₁ : (j : J) → (X → Y) → F j X → F j X
-    {- +rules -}    
--}
+IJFunc : Set → Set → Set₁
+IJFunc I J = Σ[ F ∈ ((I → Set) → J → Set) ] (∀ {A B} → A →* B → F A →* F B)
 
-data Finn : ℕ → Set where
-  zero : (n : ℕ) → Finn (suc n)
-  suc  : (n : ℕ) → Finn n → Finn (suc n)
-
-Func : Set₁
-Func = Σ[ F ∈ (Set → Set) ] (∀ {X Y} → (X → Y) → F X → F Y)
-
-Alg : Func → Set₁
-Alg (F , _) = Σ[ X ∈ Set ] (F X → X)
-
-{-
-IFunc : Set → Set₁
-IFunc I = I → Func
-
-ICont : Set → Set₁
-ICont I = I → Cont
-
-I⟦_⟧ : ICont I → I → Set → Set
-I⟦ SP ⟧ i = ⟦ SP i ⟧
-
-I⟦_⟧₁ : (SP : ICont I) (i : I) → (X → Y) → I⟦ SP ⟧ i X → I⟦ SP ⟧ i Y
-I⟦ SP ⟧₁ i = ⟦ SP i ⟧₁
-
-data IW (SP : ICont I) : I → Set where
-  Isup : (i : I) → I⟦ SP ⟧ i (IW SP i) → IW SP i
-
-
-variable n : ℕ
-
-FinCont : ICont ℕ
-FinCont zero = ⊥ᶜ
-FinCont (suc n) = ⊤ᶜ ⊎ᶜ FinCont n
-  
-Fin' : ℕ → Set
-Fin' = IW FinCont
-
-zero' : Fin' (suc n)
-zero' {n} = Isup (suc n) (inj₁ tt , λ ())
-
-suc' : Fin' n → Fin' (suc n)
-suc' {n} (Isup n (s , f)) = Isup (suc n) (inj₂ s , suc' ∘ f)
-
-to : Fin n → Fin' n
-to zero = zero'
-to (suc i) = suc' (to i)
--}
-
-FinSig : I → Set → Set
-FinSig = {!!}
-
-IFunc : Set → Set₁
-IFunc I = Σ[ F ∈ ((I → Set) → I → Set) ] (∀ {A B} → A →* B → F A →* F B)
-
-record ICont (I : Set) : Set₁ where
+record IJCont (I J : Set) : Set₁ where
   constructor _◃_
   field
-    S : I → Set
-    P : (i : I) → S i → Set
+    S : J → Set
+    P : (j : J) → S j → I → Set
 
-variable SP : ICont I
+variable SP : IJCont I J
 
-I⟦_⟧ : ICont I → (I → Set) → I → Set
-I⟦ S ◃ P ⟧ A i = Σ[ s ∈ S i ] (P i s → A i)
+I⟦_⟧ : IJCont I J → (I → Set) → J → Set
+I⟦ S ◃ P ⟧ A j = Σ[ s ∈ S j ] (P j s →* A)
 
-data IW (SP : ICont I) : I → Set where
+data IW (SP : IJCont I I) : I → Set where
   Isup : I⟦ SP ⟧ (IW SP) →* IW SP
 
-open import Codata.Musical.Notation using (♭; ∞; ♯_)
+module Fin-IW where
 
-data Coℕ : Set where
-  zero : Coℕ
-  suc  : (n : ∞ Coℕ) → Coℕ
+  open import Data.Nat
 
-infinity : Coℕ
-infinity = suc (♯ infinity)
+  variable n : ℕ
+  
+  S : ℕ → Set
+  S n = (Σ[ m ∈ ℕ ] (n ≡ suc m)) × Bool
 
-data _≈_ : Coℕ → Coℕ → Set where
-  zero : zero ≈ zero
-  suc  : ∀ {m n} → ∞ (♭ m ≈ ♭ n) → suc m ≈ suc n
+  P : (n : ℕ) → S n → ℕ → Set
+  P zero ()
+  P (suc n) ((m , _) , b) k = k ≡ m × b ≡ true
 
-data IM (SP : ICont I) : I → Set where
-  Isup : I⟦ SP ⟧ (λ i → ∞ (IM SP i)) →* IM SP
+  Fin' : ℕ → Set
+  Fin' = IW (S ◃ P)
 
-Isup⁻ : IM SP →* I⟦ SP ⟧ (IM SP)
-Isup⁻ _ (Isup i (s , f)) = s , λ p → ♭ (f p)
+  zero' : Fin' (suc n)
+  zero' {n} = Isup (suc n) (((n , refl) , false) , λ{ i () })
 
-unfoldIM : A →* I⟦ SP ⟧ A → A →* IM SP
-unfoldIM α i x with α i x
-... | s , f = Isup i (s , λ i' → ♯ unfoldIM α i (f i'))
+  suc' : Fin' n → Fin' (suc n)
+  suc' {n} finn = Isup (suc n) ((({!!} , {!!}) , true) , {!!})
+
+{-
+  to : (n : ℕ) → Fin n → Fin' n
+  to (suc n) zero = {!!}
+  to (suc n) (suc x) = {!!}
+-}

@@ -52,6 +52,7 @@ infixr 20 _⇒_
 data Ty : Set where
   * : Ty
   _⇒_ : Ty → Ty → Ty
+variable A B : Ty
   
 {- Semantics -}
 
@@ -59,16 +60,19 @@ data Ty : Set where
 ⟦ * ⟧T = Set
 ⟦ A ⇒ B ⟧T = ⟦ A ⟧T → ⟦ B ⟧T
 
-⟦_⟧Func : (A : Ty) → ⟦ A ⟧T → Set₁
+isHFunc : ⟦ A ⟧T → Set₁
 
-⟦_⟧Cat : (A : Ty) → Cat (Σ ⟦ A ⟧T ⟦ A ⟧Func)
+HFunc : Ty → Set₁
+HFunc A = Σ ⟦ A ⟧T isHFunc
 
-⟦ * ⟧Func X = Lift (suc zero) ⊤
-⟦ A ⇒ B ⟧Func H =
-  Σ[ HH ∈ ((F : ⟦ A ⟧T) → ⟦ A ⟧Func F → ⟦ B ⟧Func (H F)) ]
-  Func ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (F , FF) → H F , HH F FF)
+HCat : (A : Ty) → Cat (HFunc A)
 
-⟦ * ⟧Cat = record
+isHFunc {*} X = Lift (suc zero) ⊤
+isHFunc {A ⇒ B} H =
+  Σ[ HH ∈ ({F : ⟦ A ⟧T} → isHFunc {A} F → isHFunc {B} (H F)) ]
+  Func (HCat A) (HCat B) (λ (F , isHFuncF) → H F , HH {F} isHFuncF)
+
+HCat * = record
   { Hom = λ (X , lift tt) (Y , lift tt) → Lift (suc zero) (X → Y)
   ; id = lift (λ x → x)
   ; _∘_ = λ{ (lift f) (lift g) → lift (λ x → f (g x)) }
@@ -76,9 +80,9 @@ data Ty : Set where
   ; idr = λ f → refl
   ; ass = λ f g h → refl
   }
-⟦ A ⇒ B ⟧Cat = record
-  { Hom = λ (F , FF , FFF) (G , GG , GGG)
-    → Nat ⟦ A ⟧Cat ⟦ B ⟧Cat (λ (X , XX) → F X , FF X XX) (λ (X , XX) → G X , GG X XX) FFF GGG
+HCat (A ⇒ B) = record
+  { Hom = λ (H , HH , HHH) (J , JJ , JJJ)
+    → Nat (HCat A) (HCat B) (λ (X , XX) → H X , HH {X} XX) (λ (X , XX) → J X , JJ {X} XX) HHH JJJ
   ; id = record
     { η = λ X → id
     ; nat = λ f → trans (idr _) (sym (idl _))
@@ -93,5 +97,6 @@ data Ty : Set where
   ; ass = λ α β γ → Nat≡ (funExt λ X → ass (α .η X) (β .η X) (γ .η X))
   }
   where
-    open Cat ⟦ B ⟧Cat
+    open Cat (HCat B)
     open Nat
+

@@ -400,8 +400,7 @@ data W (S : Set) (P : S → Set) : Set where
 
 HW HM : Nf Γ (A ⇒ A) → Nf Γ A
 
-HW {Γ} {*} (lam (ne (S ◃ P ◃ _))) = ne (W S (P vz) ◃ (λ _ _ → ⊥) ◃ λ _ _ ())
-HW {Γ} {A ⇒ B} (lam (lam x)) = lam {!!}
+HW = ?
 HM = {!!}
 
 to : Set → HCont *
@@ -410,6 +409,7 @@ to X = ne (X ◃ (λ ()) ◃ λ ())
 {- Normalization -}
 
 nf : Tm Γ A → Nf Γ A
+
 nf (var x) = nvar x
 nf (lam t) = lam (nf t)
 nf (app t u) = napp (nf t) (nf u)
@@ -417,6 +417,12 @@ nf (Π I f) = Πnf I (nf ∘ f)
 nf (Σ I f) = Σnf I (nf ∘ f)
 nf (μ t) = HW (nf t)
 nf (ν t) = HM (nf t)
+
+Wᶜ : HCont ((* ⇒ *) ⇒ *)
+Wᶜ = nf (μ (lam (lam (app (var vz) (app (var (vs vz)) (var vz))))))
+
+W' : HCont (* ⇒ *) → HCont *
+W' = napp Wᶜ
 
 {- Embedding -}
 

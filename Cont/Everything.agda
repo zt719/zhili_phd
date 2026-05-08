@@ -475,6 +475,9 @@ record 2⟦_⟧ (H : 2Cont) (F : Cont) (X : Set) : Set where
     kx : PX s → X
     kf : (pf : PF s) → ⟦ F ⟧ (2⟦ RF s pf ⟧ F X)
 
+2⟦_⟧' : 2Cont → (Set → Set) → Set → Set
+2⟦ S ◃ PX + PF + RF ⟧' F X = Σ[ s ∈ S ] ((PX s → X) × ((pF : PF s) → F (2⟦ RF s pF ⟧' F X)))
+
 -- H F X = ⊤ ⊎ X × F (F X)
 
 ℍ²ᶜ : 2Cont

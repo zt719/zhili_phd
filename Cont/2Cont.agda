@@ -141,6 +141,17 @@ variable H J SPPR TQQL : 2Cont
 2⟦ S ◃ PX + PF + RF ⟧T F X
   = Σ[ s ∈ S ] (PX s → X × ((pF : PF s) → 2⟦ RF s pF ⟧T F X))
 
+2⟦_⟧T₁ : (H : 2Cont) (F : Set → Set) → (X → Y) → 2⟦ H ⟧T F X → 2⟦ H ⟧T F Y
+2⟦ S ◃ PX + PF + RF ⟧T₁ F g (s , f) =
+  s , λ pX → let (x , h) = f pX in g x , λ pF → 2⟦ RF s pF ⟧T₁ F g (h pF)
+
+Func : Set₁
+Func = Σ[ F ∈ (Set → Set) ] (∀ {X Y} → (X → Y) → F X → F Y)
+
+2⟦_⟧F : 2Cont → Func → Func
+2⟦ H ⟧F SP = 2⟦ H ⟧T (SP .proj₁) , 2⟦ H ⟧T₁ (SP .proj₁)
+
+
 2⟦_⟧S : (H : 2Cont) (TQ : Cont) → Set
 2⟦ S ◃ PX + PF + RF ⟧S (T ◃ Q) = Σ[ s ∈ S ] ((pF : PF s) → Σ[ t ∈ T ] (Q t → 2⟦ RF s pF ⟧S (T ◃ Q)))
 
@@ -148,6 +159,10 @@ variable H J SPPR TQQL : 2Cont
 2⟦ S ◃ PX + PF + RF ⟧P (T ◃ Q) (s , f) =
   Σ[ pF ∈ PF s ] let (t , f') = f pF in
     Σ[ q ∈ Q t ] (2⟦ RF s pF ⟧P (T ◃ Q) (f' q) ⊎ PX s)
+
+2⟦_⟧S' : (H : 2Cont) (TQ : Cont) → Set
+2⟦ S ◃ PX + PF + RF ⟧S' (T ◃ Q) =
+  Σ[ s ∈ S ] Σ[ ff ∈ (PF s → T) ] ((pF : PF s) → Q (ff pF) → 2⟦ RF s pF ⟧S (T ◃ Q)) 
 
 2⟦_⟧ : 2Cont → Cont → Cont
 2⟦ H ⟧ F = 2⟦ H ⟧S F ◃ 2⟦ H ⟧P F
@@ -239,21 +254,7 @@ record 2WS' H H' where
 2sup⁻ : {H : 2Cont} → 2W H →ᶜ 2⟦ H ⟧ (2W H)
 2sup⁻ = 2supS'⁻ ◃ 2supP'⁻
 
-{- Example -- List -}
 
-ListSig : (Set → Set) → Set → Set
-ListSig F X = ⊤ ⊎ F X
-
-ListSigCont : 2Cont
-ListSigCont =
-  (⊤ ⊎ ⊤) ◃ (λ x → ⊥) + (λ{ (inj₁ tt) → ⊥ ; (inj₂ tt) → ⊤ }) + λ{ (inj₂ tt) tt →
-  ⊤ ◃ (λ x → ⊤) + (λ x → ⊥) + λ _ () }
-
-Listᶜ : Cont
-Listᶜ = 2W ListSigCont
-
-List : Set → Set
-List = ⟦ Listᶜ ⟧
 
 {-
 {-# TERMINATING #-}
@@ -286,3 +287,31 @@ fold2W : {TQ : Cont} {H : 2Cont}
   → 2W H →ᶜ TQ
 fold2W α = fold2WS' α α ◃ fold2WP' α α
 -}
+
+record 2MS' (H H' : 2Cont) : Set
+
+record 2MP' (H H' : 2Cont) (s : 2MS' H H') : Set
+
+record 2MS' H H' where
+  coinductive
+  open 2Cont H'
+  field
+    out : Σ[ s ∈ S ] ((pF : PF s) → Σ[ t ∈ 2MS' H H ] (2MP' H H t → 2MS' H (RF s pF)))
+open 2MS'    
+
+record 2MP' H H' 2ms where
+  inductive
+  open 2Cont H'
+  field
+    out : let (s , f) = out 2ms in
+      Σ[ pF ∈ PF s ] let (s' , f') = f pF in
+      Σ[ q ∈ 2MP' H H s' ] (2MP' H (RF s pF) (f' q) ⊎ PX s)
+
+2MS : 2Cont → Set
+2MS H = 2MS' H H
+
+2MP : (H : 2Cont) → 2MS H → Set
+2MP H = 2MP' H H
+
+2M : 2Cont → Cont
+2M H = 2MS H ◃ 2MP H
